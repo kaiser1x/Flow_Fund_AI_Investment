@@ -1,8 +1,10 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/api/auth`
-  : 'http://localhost:5000/api/auth';
+if (!import.meta.env.VITE_API_URL) {
+  throw new Error('VITE_API_URL is not defined');
+}
+
+const API_BASE = `${import.meta.env.VITE_API_URL}/api/auth`;
 
 const authApi = axios.create({
   baseURL: API_BASE,
