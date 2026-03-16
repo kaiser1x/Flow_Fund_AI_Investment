@@ -1,31 +1,36 @@
 const { Configuration, PlaidApi, PlaidEnvironments } = require('plaid');
 
-const requiredEnvVars = ['PLAID_CLIENT_ID', 'PLAID_SECRET', 'PLAID_ENV'];
+let _client = null;
 
-for (const key of requiredEnvVars) {
-  if (!process.env[key]) {
-    throw new Error(`Missing required environment variable: ${key}`);
+function getPlaidClient() {
+  if (_client) return _client;
+
+  const requiredEnvVars = ['PLAID_CLIENT_ID', 'PLAID_SECRET', 'PLAID_ENV'];
+  for (const key of requiredEnvVars) {
+    if (!process.env[key]) {
+      throw new Error(`Missing required environment variable: ${key}`);
+    }
   }
-}
 
-const plaidEnv = process.env.PLAID_ENV;
+  const plaidEnv = process.env.PLAID_ENV;
+  if (!PlaidEnvironments[plaidEnv]) {
+    throw new Error(
+      `Invalid PLAID_ENV value "${plaidEnv}". Must be one of: ${Object.keys(PlaidEnvironments).join(', ')}`
+    );
+  }
 
-if (!PlaidEnvironments[plaidEnv]) {
-  throw new Error(
-    `Invalid PLAID_ENV value "${plaidEnv}". Must be one of: ${Object.keys(PlaidEnvironments).join(', ')}`
-  );
-}
-
-const configuration = new Configuration({
-  basePath: PlaidEnvironments[plaidEnv],
-  baseOptions: {
-    headers: {
-      'PLAID-CLIENT-ID': process.env.PLAID_CLIENT_ID,
-      'PLAID-SECRET': process.env.PLAID_SECRET,
+  const configuration = new Configuration({
+    basePath: PlaidEnvironments[plaidEnv],
+    baseOptions: {
+      headers: {
+        'PLAID-CLIENT-ID': process.env.PLAID_CLIENT_ID,
+        'PLAID-SECRET': process.env.PLAID_SECRET,
+      },
     },
-  },
-});
+  });
 
-const plaidClient = new PlaidApi(configuration);
+  _client = new PlaidApi(configuration);
+  return _client;
+}
 
-module.exports = plaidClient;
+module.exports = getPlaidClient;
