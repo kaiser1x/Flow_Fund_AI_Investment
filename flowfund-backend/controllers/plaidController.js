@@ -1,9 +1,10 @@
-const plaidClient = require('../config/plaid');
+const getPlaidClient = require('../config/plaid');
 const { Products, CountryCode } = require('plaid');
 
 // POST /api/plaid/create-link-token
 exports.createLinkToken = async (req, res) => {
   try {
+    const plaidClient = getPlaidClient();
     const response = await plaidClient.linkTokenCreate({
       user: { client_user_id: String(req.user.user_id) },
       client_name: 'FlowFund AI',
