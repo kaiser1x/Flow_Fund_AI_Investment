@@ -22,9 +22,54 @@ exports.createLinkToken = async (req, res) => {
   }
 };
 
-// POST /api/plaid/exchange-public-token — implemented in commit 3
-exports.exchangePublicToken = (req, res) => {
-  res.status(501).json({ error: 'Not implemented yet' });
+// POST /api/plaid/exchange-public-token
+exports.exchangePublicToken = async (req, res) => {
+  const { public_token } = req.body;
+  if (!public_token) return res.status(400).json({ error: 'public_token is required' });
+
+  try {
+    const plaidClient = getPlaidClient();
+
+    // Exchange public_token for access_token + plaid_item_id
+    const exchangeResponse = await plaidClient.itemPublicTokenExchange({ public_token });
+    const { access_token, item_id: plaid_item_id } = exchangeResponse.data;
+
+    // Fetch institution metadata to label the linked item
+    const itemResponse = await plaidClient.itemGet({ access_token });
+    const institutionId = itemResponse.data.item.institution_id;
+
+    let institution_name = null;
+    if (institutionId) {
+      const instResponse = await plaidClient.institutionsGetById({
+        institution_id: institutionId,
+        country_codes: [CountryCode.Us],
+      });
+      institution_name = instResponse.data.institution.name;
+    }
+
+    // Encrypt the access_token — never stored in plaintext
+    const access_token_encrypted = encrypt(access_token);
+
+    // Persist the item; re-link updates the token without creating duplicates
+    await pool.query(
+      `INSERT INTO plaid_items
+         (user_id, plaid_item_id, access_token_encrypted, institution_id, institution_name)
+       VALUES (?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         access_token_encrypted = VALUES(access_token_encrypted),
+         institution_id         = VALUES(institution_id),
+         institution_name       = VALUES(institution_name)`,
+      [req.user.user_id, plaid_item_id, access_token_encrypted, institutionId || null, institution_name]
+    );
+
+    res.status(201).json({
+      message: 'Bank account linked successfully',
+      institution_name,
+    });
+  } catch (err) {
+    console.error('exchange-public-token error:', err?.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to link bank account' });
+  }
 };
 
 // GET /api/plaid/accounts — implemented in commit 4
