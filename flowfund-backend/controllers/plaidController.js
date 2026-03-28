@@ -2,6 +2,7 @@ const getPlaidClient = require('../config/plaid');
 const { Products, CountryCode } = require('plaid');
 const { encrypt, decrypt } = require('../utils/encrypt');
 const pool = require('../config/db');
+const metricsService = require('../services/metricsService');
 
 // POST /api/plaid/create-link-token
 exports.createLinkToken = async (req, res) => {
@@ -219,7 +220,10 @@ exports.getTransactions = async (req, res) => {
       }
     }
 
-    res.json({ imported: totalImported, transactions: allTransactions });
+    // Recalculate financial metrics and investment readiness after import
+    const metrics = await metricsService.calculate(req.user.user_id);
+
+    res.json({ imported: totalImported, transactions: allTransactions, metrics });
   } catch (err) {
     console.error('get-transactions error:', err?.response?.data || err.message);
     res.status(500).json({ error: 'Failed to import transactions' });
