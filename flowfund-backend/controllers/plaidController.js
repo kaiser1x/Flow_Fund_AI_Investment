@@ -1,6 +1,6 @@
 const getPlaidClient = require('../config/plaid');
 const { Products, CountryCode } = require('plaid');
-const { encrypt } = require('../utils/encrypt');
+const { encrypt, decrypt } = require('../utils/encrypt');
 const pool = require('../config/db');
 
 // POST /api/plaid/create-link-token
@@ -72,9 +72,78 @@ exports.exchangePublicToken = async (req, res) => {
   }
 };
 
-// GET /api/plaid/accounts — implemented in commit 4
-exports.getAccounts = (req, res) => {
-  res.status(501).json({ error: 'Not implemented yet' });
+// Normalize Plaid account subtype to our ENUM values
+function normalizeAccountType(plaidSubtype) {
+  if (!plaidSubtype) return 'CHECKING';
+  const s = plaidSubtype.toLowerCase();
+  if (s === 'savings') return 'SAVINGS';
+  if (s.includes('credit')) return 'CREDIT';
+  return 'CHECKING';
+}
+
+// GET /api/plaid/accounts
+exports.getAccounts = async (req, res) => {
+  try {
+    const plaidClient = getPlaidClient();
+
+    // Load all linked items for this user
+    const [items] = await pool.query(
+      'SELECT plaid_item_id, access_token_encrypted, institution_name FROM plaid_items WHERE user_id = ?',
+      [req.user.user_id]
+    );
+
+    if (items.length === 0) {
+      return res.json({ accounts: [] });
+    }
+
+    const allAccounts = [];
+
+    for (const item of items) {
+      const access_token = decrypt(item.access_token_encrypted);
+      const response = await plaidClient.accountsGet({ access_token });
+
+      for (const account of response.data.accounts) {
+        const accountType = normalizeAccountType(account.subtype);
+        const balance = account.balances.current ?? 0;
+
+        // Upsert into bank_accounts — re-fetch never duplicates
+        await pool.query(
+          `INSERT INTO bank_accounts
+             (user_id, bank_name, account_type, balance, plaid_account_id, plaid_item_id, mask)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             bank_name    = VALUES(bank_name),
+             account_type = VALUES(account_type),
+             balance      = VALUES(balance),
+             mask         = VALUES(mask)`,
+          [
+            req.user.user_id,
+            item.institution_name || account.name,
+            accountType,
+            balance,
+            account.account_id,
+            item.plaid_item_id,
+            account.mask || null,
+          ]
+        );
+
+        allAccounts.push({
+          plaid_account_id: account.account_id,
+          name: account.name,
+          official_name: account.official_name || null,
+          type: accountType,
+          mask: account.mask || null,
+          balance,
+          institution_name: item.institution_name,
+        });
+      }
+    }
+
+    res.json({ accounts: allAccounts });
+  } catch (err) {
+    console.error('get-accounts error:', err?.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to fetch accounts' });
+  }
 };
 
 // GET /api/plaid/transactions — implemented in commit 5
