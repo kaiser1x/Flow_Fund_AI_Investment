@@ -92,6 +92,10 @@ CREATE TABLE IF NOT EXISTS investment_scores (
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
+-- transactions extended for Bank Aggregator API deduplication
+ALTER TABLE transactions
+  ADD COLUMN IF NOT EXISTS plaid_transaction_id VARCHAR(100) UNIQUE;
+
 -- bank_accounts extended for Bank Aggregator API support
 ALTER TABLE bank_accounts
   ADD COLUMN IF NOT EXISTS plaid_account_id VARCHAR(100) UNIQUE,
