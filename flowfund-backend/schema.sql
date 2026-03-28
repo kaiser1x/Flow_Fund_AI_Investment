@@ -92,7 +92,21 @@ CREATE TABLE IF NOT EXISTS investment_scores (
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
--- 9. admins
+-- 9. plaid_items (Bank Aggregator API — one item per institution link per user)
+-- Stores the encrypted aggregator access token at the item level.
+-- One item may yield multiple bank_accounts (added in commit 4).
+CREATE TABLE IF NOT EXISTS plaid_items (
+    item_id              INT AUTO_INCREMENT PRIMARY KEY,
+    user_id              INT NOT NULL,
+    plaid_item_id        VARCHAR(255) NOT NULL UNIQUE,
+    access_token_encrypted TEXT NOT NULL,
+    institution_id       VARCHAR(100),
+    institution_name     VARCHAR(150),
+    created_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+-- 10. admins
 CREATE TABLE IF NOT EXISTS admins (
     admin_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL UNIQUE,
@@ -100,7 +114,7 @@ CREATE TABLE IF NOT EXISTS admins (
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
--- 10. admin_actions
+-- 11. admin_actions
 CREATE TABLE IF NOT EXISTS admin_actions (
     action_id INT AUTO_INCREMENT PRIMARY KEY,
     admin_id INT NOT NULL,
