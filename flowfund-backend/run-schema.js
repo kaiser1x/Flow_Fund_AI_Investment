@@ -46,7 +46,20 @@ async function runSchema() {
     const statements = getStatements(sql);
 
     for (const statement of statements) {
-      await conn.query(statement);
+      try {
+        await conn.query(statement);
+      } catch (err) {
+        // Keep schema reruns safe on MySQL versions without ADD COLUMN IF NOT EXISTS.
+        if (
+          err?.code === 'ER_DUP_FIELDNAME' ||
+          err?.code === 'ER_DUP_KEYNAME' ||
+          err?.code === 'ER_CANT_DROP_FIELD_OR_KEY' ||
+          err?.code === 'ER_BAD_FIELD_ERROR'
+        ) {
+          continue;
+        }
+        throw err;
+      }
     }
 
     // ── Column migrations (MySQL-version-safe) ──────────────────────────────

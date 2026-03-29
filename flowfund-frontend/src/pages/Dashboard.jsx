@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProfile, logout as logoutApi } from '../api/auth';
+import { getAccounts } from '../api/plaid';
+import usePlaidLink from '../hooks/usePlaidLink';
 
 const styles = {
   page: {
@@ -107,6 +109,52 @@ const styles = {
     color: '#c53030',
     fontSize: '14px',
   },
+  success: {
+    color: '#1a7f37',
+    fontSize: '14px',
+    marginBottom: '12px',
+  },
+  sectionTitle: {
+    fontSize: '18px',
+    fontWeight: 700,
+    color: '#0f2d25',
+    marginBottom: '16px',
+    marginTop: '24px',
+  },
+  btnPrimary: {
+    padding: '10px 16px',
+    background: '#1a4d3e',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    marginBottom: '16px',
+  },
+  btnSecondary: {
+    padding: '8px 12px',
+    background: '#fff',
+    color: '#1a4d3e',
+    border: '1px solid #1a4d3e',
+    borderRadius: '8px',
+    fontSize: '13px',
+    cursor: 'pointer',
+    marginBottom: '16px',
+  },
+  accountItem: {
+    marginBottom: '12px',
+    paddingBottom: '12px',
+    borderBottom: '1px solid #f0f0f0',
+  },
+  accountName: {
+    fontWeight: 600,
+    color: '#0f2d25',
+  },
+  accountMeta: {
+    fontSize: '13px',
+    color: '#666',
+  },
 };
 
 export default function Dashboard() {
@@ -114,12 +162,40 @@ export default function Dashboard() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [accounts, setAccounts] = useState([]);
+  const [accountsLoading, setAccountsLoading] = useState(false);
+  const [accountsError, setAccountsError] = useState('');
+
+  const fetchAccounts = async () => {
+    setAccountsLoading(true);
+    setAccountsError('');
+    try {
+      const { data } = await getAccounts();
+      setAccounts(data.accounts || []);
+    } catch (err) {
+      setAccountsError(err.response?.data?.error || 'Failed to load linked accounts');
+    } finally {
+      setAccountsLoading(false);
+    }
+  };
+
+  const {
+    openPlaid,
+    ready,
+    loadingToken,
+    linking,
+    error: plaidError,
+    successMessage,
+    retryLinkToken,
+  } = usePlaidLink(fetchAccounts);
 
   useEffect(() => {
     getProfile()
       .then(({ data }) => setProfile(data))
       .catch((err) => setError(err.response?.data?.error || 'Failed to load profile'))
       .finally(() => setLoading(false));
+
+    fetchAccounts();
   }, []);
 
   const handleLogout = async () => {
@@ -163,6 +239,23 @@ export default function Dashboard() {
     );
   }
 
+  if (!profile) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.header}>
+          <div style={styles.logo}>
+            <div style={styles.logoIcon}>
+              <div style={styles.logoIconInner} />
+            </div>
+            <span style={styles.logoText}>FLOWFUND</span>
+          </div>
+          <button style={styles.btnLogout} onClick={handleLogout}>Log out</button>
+        </div>
+        <p style={styles.error}>Profile data is unavailable. Please log in again.</p>
+      </div>
+    );
+  }
+
   const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || 'User';
 
   return (
@@ -193,6 +286,42 @@ export default function Dashboard() {
             <span style={styles.roleBadge}>{profile.role_name}</span>
           </div>
         </div>
+
+        <h3 style={styles.sectionTitle}>Linked Bank Accounts</h3>
+        {successMessage && <p style={styles.success}>{successMessage}</p>}
+        {plaidError && (
+          <>
+            <p style={styles.error}>{plaidError}</p>
+            <button style={styles.btnSecondary} onClick={retryLinkToken}>
+              Retry
+            </button>
+          </>
+        )}
+
+        <button
+          style={styles.btnPrimary}
+          onClick={openPlaid}
+          disabled={loadingToken || linking || !ready}
+        >
+          {loadingToken ? 'Preparing Plaid...' : linking ? 'Linking...' : 'Connect Bank'}
+        </button>
+
+        {accountsError && <p style={styles.error}>{accountsError}</p>}
+        {accountsLoading && <p style={styles.loading}>Loading linked accounts...</p>}
+        {!accountsLoading && accounts.length === 0 && (
+          <p style={styles.accountMeta}>No linked accounts yet.</p>
+        )}
+        {!accountsLoading &&
+          accounts.map((account) => (
+            <div key={account.plaid_account_id} style={styles.accountItem}>
+              <div style={styles.accountName}>
+                {account.institution_name || 'Bank'} - {account.name}
+              </div>
+              <div style={styles.accountMeta}>
+                {account.type} {account.mask ? `- ****${account.mask}` : ''} - ${Number(account.balance || 0).toFixed(2)}
+              </div>
+            </div>
+          ))}
       </div>
     </div>
   );

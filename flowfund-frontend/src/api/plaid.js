@@ -3,16 +3,16 @@ import axios from 'axios';
 const apiUrl = import.meta.env.VITE_API_URL;
 if (!apiUrl) {
   // Avoid crashing the entire SPA at module load time.
-  console.error('VITE_API_URL is not defined. API requests will fail until it is set.');
+  console.error('VITE_API_URL is not defined. Plaid API requests will fail until it is set.');
 }
-const API_BASE = `${apiUrl || ''}/api/auth`;
+const API_BASE = `${apiUrl || ''}/api/plaid`;
 
-const authApi = axios.create({
+const plaidApi = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
 });
 
-authApi.interceptors.request.use(
+plaidApi.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -23,7 +23,7 @@ authApi.interceptors.request.use(
   (err) => Promise.reject(err)
 );
 
-authApi.interceptors.response.use(
+plaidApi.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
@@ -34,9 +34,9 @@ authApi.interceptors.response.use(
   }
 );
 
-export const register = (data) => authApi.post('/register', data);
-export const login = (data) => authApi.post('/login', data);
-export const logout = () => authApi.post('/logout');
-export const getProfile = () => authApi.get('/profile');
+export const createLinkToken = () => plaidApi.post('/create-link-token');
+export const exchangePublicToken = (public_token) =>
+  plaidApi.post('/exchange-public-token', { public_token });
+export const getAccounts = () => plaidApi.get('/accounts');
 
-export default authApi;
+export default plaidApi;

@@ -92,6 +92,28 @@ CREATE TABLE IF NOT EXISTS investment_scores (
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
+<<<<<<< HEAD
+=======
+-- transactions extended for Bank Aggregator API deduplication
+ALTER TABLE transactions
+  ADD COLUMN plaid_transaction_id VARCHAR(100) UNIQUE;
+
+-- bank_accounts extended for Bank Aggregator API support
+ALTER TABLE bank_accounts
+  ADD COLUMN plaid_account_id VARCHAR(100) UNIQUE,
+  ADD COLUMN plaid_item_id    VARCHAR(255),
+  ADD COLUMN mask             VARCHAR(10);
+
+-- Remove legacy FK that can block plaid_item_id type migrations
+ALTER TABLE bank_accounts
+  DROP FOREIGN KEY fk_bank_accounts_plaid_item;
+
+-- Force correct Plaid column types on existing databases created with older schema
+ALTER TABLE bank_accounts
+  MODIFY COLUMN plaid_account_id VARCHAR(100),
+  MODIFY COLUMN plaid_item_id    VARCHAR(255);
+
+>>>>>>> e1cb552683721aaaf04ad8a5ff167540ce1ce3d0
 -- 9. plaid_items (Bank Aggregator API — one item per institution link per user)
 -- Stores the encrypted aggregator access token at the item level.
 -- One item may yield multiple bank_accounts (added in commit 4).
@@ -105,6 +127,26 @@ CREATE TABLE IF NOT EXISTS plaid_items (
     created_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
+
+-- Force correct PK behavior in case item_id was created without AUTO_INCREMENT
+ALTER TABLE plaid_items
+  MODIFY COLUMN item_id INT NOT NULL AUTO_INCREMENT;
+
+-- Force correct type in case plaid_items.plaid_item_id was previously created as INT
+ALTER TABLE plaid_items
+  MODIFY COLUMN plaid_item_id VARCHAR(255) NOT NULL;
+
+-- Legacy compatibility: older schemas stored encrypted token parts in separate NOT NULL columns.
+-- Ensure these columns (if present) do not block inserts that now use access_token_encrypted.
+ALTER TABLE plaid_items
+  ADD COLUMN access_token_iv TEXT NULL,
+  ADD COLUMN access_token_tag TEXT NULL,
+  ADD COLUMN access_token_ciphertext LONGTEXT NULL;
+
+ALTER TABLE plaid_items
+  MODIFY COLUMN access_token_iv TEXT NULL,
+  MODIFY COLUMN access_token_tag TEXT NULL,
+  MODIFY COLUMN access_token_ciphertext LONGTEXT NULL;
 
 -- 10. admins
 CREATE TABLE IF NOT EXISTS admins (
