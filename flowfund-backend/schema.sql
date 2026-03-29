@@ -99,10 +99,10 @@ ALTER TABLE transactions
   ADD COLUMN plaid_transaction_id VARCHAR(100) UNIQUE;
 
 -- bank_accounts extended for Bank Aggregator API support
-ALTER TABLE bank_accounts
-  ADD COLUMN plaid_account_id VARCHAR(100) UNIQUE,
-  ADD COLUMN plaid_item_id    VARCHAR(255),
-  ADD COLUMN mask             VARCHAR(10);
+-- Split into individual statements so each can be caught independently on re-runs
+ALTER TABLE bank_accounts ADD COLUMN plaid_account_id VARCHAR(100) UNIQUE;
+ALTER TABLE bank_accounts ADD COLUMN plaid_item_id VARCHAR(255);
+ALTER TABLE bank_accounts ADD COLUMN mask VARCHAR(10);
 
 -- Remove legacy FK that can block plaid_item_id type migrations
 ALTER TABLE bank_accounts
