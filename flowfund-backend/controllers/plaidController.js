@@ -200,19 +200,25 @@ exports.getTransactions = async (req, res) => {
         const transactionType = txn.amount < 0 ? 'INCOME' : 'EXPENSE';
         const category        = txn.category?.[0] || 'Uncategorized';
         const description     = txn.name || null;
+        const merchantName    = txn.merchant_name || null;
+        const pending         = txn.pending ? 1 : 0;
         const transactionDate = txn.date;
 
         await pool.query(
           `INSERT INTO transactions
-             (account_id, amount, transaction_type, category, description, transaction_date, plaid_transaction_id)
-           VALUES (?, ?, ?, ?, ?, ?, ?)
+             (account_id, amount, transaction_type, category, description,
+              transaction_date, plaid_transaction_id, merchant_name, pending, source)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'plaid')
            ON DUPLICATE KEY UPDATE
              amount           = VALUES(amount),
              transaction_type = VALUES(transaction_type),
              category         = VALUES(category),
              description      = VALUES(description),
-             transaction_date = VALUES(transaction_date)`,
-          [accountId, amount, transactionType, category, description, transactionDate, txn.transaction_id]
+             transaction_date = VALUES(transaction_date),
+             merchant_name    = VALUES(merchant_name),
+             pending          = VALUES(pending)`,
+          [accountId, amount, transactionType, category, description,
+           transactionDate, txn.transaction_id, merchantName, pending]
         );
 
         totalImported++;
@@ -223,6 +229,8 @@ exports.getTransactions = async (req, res) => {
           transaction_type: transactionType,
           category,
           description,
+          merchant_name: merchantName,
+          pending: Boolean(pending),
           transaction_date: transactionDate,
         });
       }

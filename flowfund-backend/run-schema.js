@@ -74,6 +74,11 @@ async function runSchema() {
     // transactions: deduplication key for imported aggregator records
     await conditionalAddColumn(conn, db, 'transactions', 'plaid_transaction_id', 'VARCHAR(100) UNIQUE');
 
+    // transactions: enriched fields from Bank Aggregator API
+    await conditionalAddColumn(conn, db, 'transactions', 'merchant_name', 'VARCHAR(150)');
+    await conditionalAddColumn(conn, db, 'transactions', 'pending',       'BOOLEAN DEFAULT FALSE');
+    await conditionalAddColumn(conn, db, 'transactions', 'source',        "VARCHAR(20) DEFAULT 'plaid'");
+
     console.log('Schema applied.');
   } finally {
     await conn.end();
