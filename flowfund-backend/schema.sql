@@ -123,3 +123,14 @@ CREATE TABLE IF NOT EXISTS admin_actions (
     FOREIGN KEY (admin_id) REFERENCES admins(admin_id),
     FOREIGN KEY (target_user_id) REFERENCES users(user_id)
 );
+
+-- 12. email_otps (MFA verification codes)
+CREATE TABLE IF NOT EXISTS email_otps (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    otp_hash VARCHAR(255) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    used TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);

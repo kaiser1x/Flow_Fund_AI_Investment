@@ -79,6 +79,9 @@ async function runSchema() {
     await conditionalAddColumn(conn, db, 'transactions', 'pending',       'BOOLEAN DEFAULT FALSE');
     await conditionalAddColumn(conn, db, 'transactions', 'source',        "VARCHAR(20) DEFAULT 'plaid'");
 
+    // users: email verification for MFA access control
+    await conditionalAddColumn(conn, db, 'users', 'email_verified', 'TINYINT(1) NOT NULL DEFAULT 0');
+
     console.log('Schema applied.');
   } finally {
     await conn.end();

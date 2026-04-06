@@ -205,7 +205,7 @@ export default function Register() {
     setLoading(true);
     try {
       await registerApi({ first_name, last_name, email, password });
-      navigate('/login');
+      navigate(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (err) {
       setError(err.response?.data?.error || 'Registration failed. Try again.');
     } finally {

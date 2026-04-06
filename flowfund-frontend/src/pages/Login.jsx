@@ -211,6 +211,10 @@ export default function Login() {
       scheduleSessionExpiry();
       navigate('/dashboard');
     } catch (err) {
+      if (err.response?.data?.requiresVerification) {
+        navigate(`/verify-email?email=${encodeURIComponent(err.response.data.email || email)}`);
+        return;
+      }
       setError(err.response?.data?.error || 'Login failed. Try again.');
     } finally {
       setLoading(false);
