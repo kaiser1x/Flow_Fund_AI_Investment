@@ -36,16 +36,28 @@ async function conditionalAddColumn(conn, dbName, table, column, definition) {
 
 async function runSchema() {
   const config = getPoolConfig();
+
+  // Log connection target so Railway logs confirm which host/SSL config is active.
+  // Password is intentionally omitted.
+  const target = config.host
+    ? `${config.user}@${config.host}:${config.port}/${config.database} ssl=${!!config.ssl}`
+    : '(no host resolved — check DB env vars)';
+  console.log(`[schema] connecting: ${target}`);
+
   const conn = await mysql.createConnection(config);
+  console.log('[schema] connection established');
 
   // Resolve the active database name for INFORMATION_SCHEMA queries
   const [[{ db }]] = await conn.query('SELECT DATABASE() AS db');
+  console.log(`[schema] active database: ${db}`);
 
   try {
     const sql = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
     const statements = getStatements(sql);
+    console.log(`[schema] executing ${statements.length} statements`);
 
-    for (const statement of statements) {
+    for (let i = 0; i < statements.length; i++) {
+      const statement = statements[i];
       try {
         await conn.query(statement);
       } catch (err) {
@@ -58,6 +70,7 @@ async function runSchema() {
         ) {
           continue;
         }
+        console.error(`[schema] statement ${i + 1}/${statements.length} failed (${err.code}): ${statement.slice(0, 120).replace(/\s+/g, ' ')}`);
         throw err;
       }
     }
@@ -82,7 +95,7 @@ async function runSchema() {
     // users: email verification for MFA access control
     await conditionalAddColumn(conn, db, 'users', 'email_verified', 'TINYINT(1) NOT NULL DEFAULT 0');
 
-    console.log('Schema applied.');
+    console.log('[schema] Schema applied successfully.');
   } finally {
     await conn.end();
   }
