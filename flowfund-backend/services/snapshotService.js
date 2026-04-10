@@ -20,7 +20,28 @@ async function buildSnapshot(user_id) {
   const hasLinkedAccounts = itemRows[0].cnt > 0;
 
   if (!hasLinkedAccounts) {
+    console.log(`[SNAPSHOT_GATE] user_id=${user_id} no linked accounts → demo`);
     return { hasData: false, reason: 'No linked bank accounts found.' };
+  }
+
+  // ── Check for actual transaction data ────────────────────────────────────
+  // Guard: even if accounts are linked, treat as no-data if no transactions
+  // exist yet (e.g. Plaid import pending / failed). This keeps the chatbot
+  // consistent with the dashboard, which also falls back to demo when the
+  // transactions table is empty for this user.
+  const [txnCountRows] = await pool.query(
+    `SELECT COUNT(*) AS cnt
+     FROM transactions t
+     JOIN bank_accounts b ON t.account_id = b.account_id
+     WHERE b.user_id = ?
+       AND t.transaction_date >= ?`,
+    [user_id, d90]
+  );
+  const hasTransactions = txnCountRows[0].cnt > 0;
+  console.log(`[SNAPSHOT_GATE] user_id=${user_id} hasLinkedAccounts=true txnCount=${txnCountRows[0].cnt} hasTransactions=${hasTransactions}`);
+
+  if (!hasTransactions) {
+    return { hasData: false, reason: 'No transactions found in the last 90 days.' };
   }
 
   // ── Account summary ─────────────────────────────────────────────────────
@@ -37,6 +58,7 @@ async function buildSnapshot(user_id) {
   const spend90  = await sumExpenses(user_id, d90,  today);
   const priorSpend30 = await sumExpenses(user_id, d60, d30);
   const avgMonthlySpend = spend90 > 0 ? spend90 / 3 : 0;
+  console.log(`[SNAPSHOT_SPENDING] user_id=${user_id} source=db dateRange=${d30}→${today} spend30=${spend30} spend90=${spend90}`);
 
   // ── Top categories (90d) ────────────────────────────────────────────────
   const [catRows] = await pool.query(

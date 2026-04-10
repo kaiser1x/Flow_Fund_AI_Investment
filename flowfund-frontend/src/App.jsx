@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import MarketAnalysis from './pages/MarketAnalysis';
+import ProfilePage from './pages/ProfilePage';
 import { scheduleSessionExpiry } from './utils/session';
 
 function ProtectedRoute({ children }) {
@@ -55,6 +56,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <MarketAnalysis />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
           </ProtectedRoute>
         }
       />

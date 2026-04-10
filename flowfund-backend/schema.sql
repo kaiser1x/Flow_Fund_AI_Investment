@@ -104,7 +104,19 @@ CREATE TABLE IF NOT EXISTS plaid_items (
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
--- 10. admins
+-- 10. notifications
+CREATE TABLE IF NOT EXISTS notifications (
+    notification_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id         INT NOT NULL,
+    type            ENUM('spending_alert','budget_warning','large_transaction','system') NOT NULL DEFAULT 'system',
+    title           VARCHAR(255) NOT NULL,
+    message         TEXT NOT NULL,
+    is_read         BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+-- 11. admins
 CREATE TABLE IF NOT EXISTS admins (
     admin_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL UNIQUE,
