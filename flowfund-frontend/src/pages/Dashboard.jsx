@@ -7,6 +7,7 @@ import usePlaidLink from '../hooks/usePlaidLink';
 import ChatPanel from '../components/ChatPanel';
 import TransactionFeed from '../components/TransactionFeed';
 import AppHeader, { LogoMark } from '../components/AppHeader';
+import InvestmentReadinessWidget from '../components/InvestmentReadinessWidget';
 import { C } from '../theme/flowfundTheme';
 
 // ─── Inject keyframe animations ─────────────────────────────────────────────
@@ -77,18 +78,23 @@ function StatCard({ icon, label, value, sub, valueColor, shimmer }) {
 }
 
 // ─── ProfileCard ─────────────────────────────────────────────────────────────
-function ProfileCard({ profile, accountsCount }) {
+function ProfileCard({ profile, accountsCount, onNavigateToProfile }) {
   if (!profile) return null;
   const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || 'User';
   const initials = [profile.first_name, profile.last_name]
     .filter(Boolean).map(n => n[0]?.toUpperCase()).join('') || 'FF';
 
   return (
-    <div style={{
-      background: C.surface, borderRadius: C.r,
-      border: `1px solid ${C.border}`, boxShadow: C.shadow,
-      overflow: 'hidden',
-    }}>
+    // Clicking the card navigates to /profile (no visual change)
+    <div
+      onClick={onNavigateToProfile}
+      title="View profile"
+      style={{
+        background: C.surface, borderRadius: C.r,
+        border: `1px solid ${C.border}`, boxShadow: C.shadow,
+        overflow: 'hidden', cursor: 'pointer',
+      }}
+    >
       <div style={{ height: '4px', background: `linear-gradient(90deg, ${C.brand} 0%, ${C.accent} 100%)` }} />
       <div style={{ padding: '22px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
@@ -437,7 +443,7 @@ export default function Dashboard() {
       minHeight: '100vh', background: C.bg,
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     }}>
-      <AppHeader profile={profile} onLogout={handleLogout} liveData={!isDemo} />
+      <AppHeader profile={profile} onLogout={handleLogout} liveData={!isDemo} isDemo={isDemo} />
 
       <div style={{
         maxWidth: '1280px', margin: '0 auto',
@@ -496,9 +502,10 @@ export default function Dashboard() {
 
           {/* Right column */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <ProfileCard profile={profile} accountsCount={accounts.length} />
-            <div style={{ position: 'sticky', top: '88px' }}>
+            <ProfileCard profile={profile} accountsCount={accounts.length} onNavigateToProfile={() => navigate('/profile')} />
+            <div style={{ position: 'sticky', top: '88px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
               <ChatPanel hasLinkedAccounts={accounts.length > 0} isDemo={isDemo} />
+              <InvestmentReadinessWidget />
             </div>
           </div>
         </div>

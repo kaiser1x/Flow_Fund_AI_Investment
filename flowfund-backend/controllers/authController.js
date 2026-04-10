@@ -82,6 +82,76 @@ exports.logout = async (req, res) => {
   }
 };
 
+// UPDATE PROFILE (protected) — PATCH /api/auth/profile
+exports.updateProfile = async (req, res) => {
+  const uid = req.user?.user_id;
+  const { first_name, last_name, email, phone, date_of_birth } = req.body;
+  console.log(`[PROFILE_UPDATE] user_id=${uid} fields=${JSON.stringify({ first_name, last_name, email, phone, date_of_birth })}`);
+
+  // ── Validation ────────────────────────────────────────────────────────────
+  const trimmedName = (first_name || '').trim();
+  if (!trimmedName) {
+    console.log('[PROFILE_UPDATE] validation_fail: first_name empty');
+    return res.status(400).json({ error: 'First name is required' });
+  }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    console.log('[PROFILE_UPDATE] validation_fail: invalid email');
+    return res.status(400).json({ error: 'A valid email address is required' });
+  }
+  if (phone && phone.trim() && !/^[\d\s\+\-\(\)\.]{7,20}$/.test(phone.trim())) {
+    console.log('[PROFILE_UPDATE] validation_fail: invalid phone');
+    return res.status(400).json({ error: 'Phone number format is invalid' });
+  }
+
+  try {
+    // Check email uniqueness if it changed
+    const [existing] = await pool.query(
+      'SELECT user_id FROM users WHERE email = ? AND user_id != ?',
+      [email.trim(), uid]
+    );
+    if (existing.length > 0) {
+      return res.status(409).json({ error: 'Email is already in use by another account' });
+    }
+
+    // Update users.email
+    await pool.query('UPDATE users SET email = ? WHERE user_id = ?', [email.trim(), uid]);
+
+    // Update or insert user_profiles row
+    const [profileRows] = await pool.query(
+      'SELECT profile_id FROM user_profiles WHERE user_id = ?', [uid]
+    );
+    if (profileRows.length > 0) {
+      await pool.query(
+        `UPDATE user_profiles
+         SET first_name = ?, last_name = ?, phone = ?, date_of_birth = ?
+         WHERE user_id = ?`,
+        [trimmedName, (last_name || '').trim() || null, (phone || '').trim() || null, date_of_birth || null, uid]
+      );
+    } else {
+      await pool.query(
+        `INSERT INTO user_profiles (user_id, first_name, last_name, phone, date_of_birth)
+         VALUES (?, ?, ?, ?, ?)`,
+        [uid, trimmedName, (last_name || '').trim() || null, (phone || '').trim() || null, date_of_birth || null]
+      );
+    }
+
+    // Return the updated profile (reuse same shape as getProfile)
+    const [rows] = await pool.query(
+      `SELECT u.user_id, u.email, r.role_name, p.first_name, p.last_name, p.phone, p.date_of_birth, u.created_at
+       FROM users u
+       JOIN roles r ON u.role_id = r.role_id
+       LEFT JOIN user_profiles p ON u.user_id = p.user_id
+       WHERE u.user_id = ? LIMIT 1`,
+      [uid]
+    );
+    console.log(`[PROFILE_UPDATE] success user_id=${uid}`);
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('[PROFILE_UPDATE_ERROR]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // GET PROFILE (protected)
 exports.getProfile = async (req, res) => {
   try {
