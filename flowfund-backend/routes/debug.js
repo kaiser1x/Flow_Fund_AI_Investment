@@ -44,6 +44,24 @@ router.get('/ai-health', async (_req, res) => {
   res.json(report);
 });
 
+// GET /api/debug/test-email?to=you@example.com — fires a real test email and returns the outcome
+router.get('/test-email', async (req, res) => {
+  const to = req.query.to;
+  if (!to) return res.status(400).json({ error: 'Pass ?to=your@email.com' });
+
+  const { sendPasswordResetEmail } = require('../services/emailService');
+  const result = { to, provider: process.env.EMAIL_PROVIDER || 'resend', success: false, error: null };
+
+  try {
+    await sendPasswordResetEmail(to, 'https://example.com/reset-password?token=test-debug-token');
+    result.success = true;
+  } catch (err) {
+    result.error = err.message;
+  }
+
+  res.json(result);
+});
+
 // GET /api/debug/email-config — shows active email provider config (no secrets)
 router.get('/email-config', (_req, res) => {
   res.json({
