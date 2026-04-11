@@ -24,6 +24,7 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.17.4",
+    "nodemailer": "^8.0.5",
     "plaid": "^41.4.0"
   }
 }
