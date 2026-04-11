@@ -101,9 +101,41 @@ async function runSchema() {
   }
 }
 
-runSchema()
-  .then(() => process.exit(0))
-  .catch((err) => {
-    console.error('Schema failed:', err.message);
-    process.exit(1);
-  });
+const RETRY_ATTEMPTS = 5;
+const RETRY_BASE_MS  = 3000; // 3s, 6s, 12s, 24s, 48s
+
+const CONNECTION_ERROR_CODES = new Set([
+  'ECONNREFUSED',
+  'PROTOCOL_CONNECTION_LOST',
+  'ENOTFOUND',
+  'ETIMEDOUT',
+  'ECONNRESET',
+]);
+
+function isTransientConnectionError(err) {
+  return (
+    CONNECTION_ERROR_CODES.has(err.code) ||
+    (err.message || '').includes('Connection lost') ||
+    (err.message || '').includes('ECONNREFUSED')
+  );
+}
+
+async function runSchemaWithRetry() {
+  for (let attempt = 1; attempt <= RETRY_ATTEMPTS; attempt++) {
+    try {
+      await runSchema();
+      return;
+    } catch (err) {
+      const isTransient = isTransientConnectionError(err);
+      if (!isTransient || attempt === RETRY_ATTEMPTS) {
+        console.error(`Schema failed: ${err.message}`);
+        process.exit(1);
+      }
+      const delayMs = RETRY_BASE_MS * Math.pow(2, attempt - 1);
+      console.warn(`[schema] attempt ${attempt}/${RETRY_ATTEMPTS} failed (${err.code || err.message}). Retrying in ${delayMs / 1000}s...`);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+}
+
+runSchemaWithRetry();
