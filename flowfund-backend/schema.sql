@@ -116,7 +116,21 @@ CREATE TABLE IF NOT EXISTS notifications (
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
--- 12. goals
+-- 12. simulations (saved snapshots)
+CREATE TABLE IF NOT EXISTS simulations (
+    sim_id          INT AUTO_INCREMENT PRIMARY KEY,
+    user_id         INT NOT NULL,
+    name            VARCHAR(100) NOT NULL,
+    scenario_type   ENUM('compound_interest','stock_market','debt_payoff','emergency_fund') NOT NULL,
+    inputs          JSON NOT NULL,
+    result_summary  JSON NOT NULL,
+    projection_data JSON NOT NULL,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+-- 13. goals
 CREATE TABLE IF NOT EXISTS goals (
     goal_id        INT AUTO_INCREMENT PRIMARY KEY,
     user_id        INT NOT NULL,

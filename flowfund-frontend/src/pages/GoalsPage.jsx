@@ -501,28 +501,6 @@ export default function GoalsPage() {
   const handleSave = async (form) => {
     setSaving(true);
     try {
-      if (isDemo) {
-        // Demo mode: simulate save
-        setShowModal(false);
-        setIsDemo(false);
-        const nowId = Date.now();
-        const faked = {
-          goal_id: nowId, name: form.name, type: form.type,
-          target_amount: parseFloat(form.target_amount) || 0,
-          current_amount: parseFloat(form.current_amount) || 0,
-          target_date: form.target_date, notes: form.notes,
-          status: 'active', auto_track: form.auto_track,
-          status_label: 'On Track', status_color: 'green',
-          progress_pct: 0, created_at: new Date().toISOString(),
-        };
-        if (form._id) {
-          setGoals(gs => gs.map(g => String(g.goal_id) === String(form._id) ? { ...g, ...faked, goal_id: g.goal_id } : g));
-        } else {
-          setGoals(gs => [faked, ...gs]);
-        }
-        return;
-      }
-
       const payload = {
         name: form.name, type: form.type,
         target_amount: parseFloat(form.target_amount),
@@ -532,12 +510,20 @@ export default function GoalsPage() {
         auto_track: !!form.auto_track,
       };
 
-      if (form._id) {
+      // Treat edits of demo placeholder goals (id starts with 'demo-') as creates
+      const isRealEdit = form._id && !String(form._id).startsWith('demo-');
+
+      if (isRealEdit) {
         const { data } = await updateGoal(form._id, payload);
         setGoals(gs => gs.map(g => g.goal_id === form._id ? data.goal : g));
       } else {
         const { data } = await createGoal(payload);
-        setGoals(gs => [data.goal, ...gs]);
+        // Drop demo placeholders when the first real goal is saved
+        setGoals(gs => {
+          const realGoals = gs.filter(g => !String(g.goal_id).startsWith('demo-'));
+          return [data.goal, ...realGoals];
+        });
+        setIsDemo(false);
       }
       setShowModal(false);
     } catch (err) {

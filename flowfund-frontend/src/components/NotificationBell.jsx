@@ -78,6 +78,37 @@ const LOCAL_DEMO = [
   },
 ];
 
+// ── Demo read-state persistence (survives page navigation) ───────────────────
+const DEMO_READ_KEY = 'ff_demo_notif_read';
+
+function getDemoReadIds() {
+  try { return new Set(JSON.parse(localStorage.getItem(DEMO_READ_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+
+function saveDemoReadId(id) {
+  try {
+    const ids = getDemoReadIds();
+    ids.add(String(id));
+    localStorage.setItem(DEMO_READ_KEY, JSON.stringify([...ids]));
+  } catch { /* storage unavailable — ignore */ }
+}
+
+function saveDemoReadAll(notifications) {
+  try {
+    const ids = notifications.map(n => String(n.notification_id));
+    localStorage.setItem(DEMO_READ_KEY, JSON.stringify(ids));
+  } catch { /* ignore */ }
+}
+
+function applyDemoReadState(notifications) {
+  const readIds = getDemoReadIds();
+  if (readIds.size === 0) return notifications;
+  return notifications.map(n =>
+    readIds.has(String(n.notification_id)) ? { ...n, is_read: true } : n
+  );
+}
+
 // ── NotificationBell ──────────────────────────────────────────────────────────
 export default function NotificationBell({ isDemo = false }) {
   const [notifications, setNotifications] = useState([]);
@@ -88,9 +119,14 @@ export default function NotificationBell({ isDemo = false }) {
   // Fetch on mount
   useEffect(() => {
     getNotifications()
-      .then(({ data }) => setNotifications(data.notifications || []))
+      .then(({ data }) => {
+        const notifs = data.notifications || [];
+        // If these are demo notifications, apply any previously saved read state
+        const allDemo = notifs.every(n => String(n.notification_id).startsWith('demo-'));
+        setNotifications(allDemo ? applyDemoReadState(notifs) : notifs);
+      })
       .catch(() => {
-        if (isDemo) setNotifications(LOCAL_DEMO);
+        if (isDemo) setNotifications(applyDemoReadState(LOCAL_DEMO));
       })
       .finally(() => setLoading(false));
   }, [isDemo]);
@@ -118,14 +154,21 @@ export default function NotificationBell({ isDemo = false }) {
     setNotifications((prev) =>
       prev.map((n) => (n.notification_id === id ? { ...n, is_read: true } : n))
     );
-    if (isAllDemo) return; // skip API call for demo notifications
+    if (isAllDemo) {
+      saveDemoReadId(id); // persist across page navigation
+      return;
+    }
     try {
       await markNotificationRead(id);
     } catch (_) { /* swallow — optimistic state stays */ }
   }, [isAllDemo]);
 
   const handleMarkAllRead = useCallback(async () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    setNotifications((prev) => {
+      const updated = prev.map((n) => ({ ...n, is_read: true }));
+      if (isAllDemo) saveDemoReadAll(updated); // persist across page navigation
+      return updated;
+    });
     if (isAllDemo) return;
     try {
       await markAllNotificationsRead();

@@ -9,6 +9,7 @@ import TransactionFeed from '../components/TransactionFeed';
 import AppHeader, { LogoMark } from '../components/AppHeader';
 import InvestmentReadinessWidget from '../components/InvestmentReadinessWidget';
 import GoalsWidget from '../components/GoalsWidget';
+import SimulationsWidget from '../components/SimulationsWidget';
 import { C } from '../theme/flowfundTheme';
 
 // ─── Inject keyframe animations ─────────────────────────────────────────────
@@ -508,6 +509,7 @@ export default function Dashboard() {
               <ChatPanel hasLinkedAccounts={accounts.length > 0} isDemo={isDemo} />
               <InvestmentReadinessWidget />
               <GoalsWidget />
+              <SimulationsWidget />
             </div>
           </div>
         </div>
