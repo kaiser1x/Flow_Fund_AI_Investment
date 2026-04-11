@@ -504,6 +504,7 @@ export default function Dashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <ProfileCard profile={profile} accountsCount={accounts.length} onNavigateToProfile={() => navigate('/profile')} />
             <div style={{ position: 'sticky', top: '88px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            <div style={{ position: 'sticky', top: '88px' }}>
               <ChatPanel hasLinkedAccounts={accounts.length > 0} isDemo={isDemo} />
               <InvestmentReadinessWidget />
             </div>
