@@ -267,6 +267,11 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+            <div style={{ textAlign: 'right', marginTop: '8px' }}>
+              <Link to="/forgot-password" style={{ fontSize: '12px', color: '#1a4d3e', textDecoration: 'none', fontWeight: 500 }}>
+                Forgot password?
+              </Link>
+            </div>
           </div>
           <button type="submit" style={styles.btnPrimary} disabled={loading}>
             {loading ? 'Signing in...' : 'CONTINUE'}

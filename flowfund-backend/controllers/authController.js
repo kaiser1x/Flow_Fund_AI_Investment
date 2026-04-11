@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const pool = require('../config/db');
-const { sendOtpEmail } = require('../services/emailService');
+const { sendOtpEmail, sendPasswordResetEmail } = require('../services/emailService');
 
 function generateOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -192,6 +192,107 @@ exports.logout = async (req, res) => {
     res.json({ message: 'Logged out successfully' });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+};
+
+// ── FORGOT PASSWORD ───────────────────────────────────────────────────────────
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+  // Always return the same neutral message — never reveal whether email exists.
+  const NEUTRAL = { message: "If an account exists for that email, a reset link has been sent." };
+
+  if (!email) return res.status(400).json({ error: 'Email required' });
+
+  try {
+    const [users] = await pool.query(
+      'SELECT user_id FROM users WHERE email = ? AND is_active = 1 LIMIT 1',
+      [email]
+    );
+    if (users.length === 0) return res.json(NEUTRAL);
+
+    const { user_id } = users[0];
+
+    // Rate limit: one reset request per 60 seconds per user
+    const [recent] = await pool.query(
+      `SELECT 1 FROM password_reset_tokens
+       WHERE user_id = ? AND created_at > DATE_SUB(NOW(), INTERVAL 60 SECOND) LIMIT 1`,
+      [user_id]
+    );
+    if (recent.length > 0) return res.json(NEUTRAL);
+
+    // Invalidate any existing unused tokens for this user
+    await pool.query(
+      `UPDATE password_reset_tokens SET used_at = NOW()
+       WHERE user_id = ? AND used_at IS NULL`,
+      [user_id]
+    );
+
+    // 32 bytes of randomness → 64-char hex token sent in the link
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    // SHA-256 hash stored in DB — lookup-by-hash, no bcrypt needed here
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+    const expiresAtStr = expiresAt.toISOString().slice(0, 19).replace('T', ' ');
+
+    await pool.query(
+      'INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)',
+      [user_id, tokenHash, expiresAtStr]
+    );
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const resetUrl = `${frontendUrl}/reset-password?token=${rawToken}`;
+
+    // Only log the raw link in non-production (dev fallback when RESEND_API_KEY is unset)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[auth] password reset URL for user_id=${user_id}: ${resetUrl}`);
+    } else {
+      console.log(`[auth] password reset email dispatched for user_id=${user_id}`);
+    }
+
+    await sendPasswordResetEmail(email, resetUrl);
+
+    return res.json(NEUTRAL);
+  } catch (err) {
+    console.error('forgotPassword error:', err.message);
+    // Still return neutral — never leak server errors to the client here
+    return res.json(NEUTRAL);
+  }
+};
+
+// ── RESET PASSWORD ────────────────────────────────────────────────────────────
+exports.resetPassword = async (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password) return res.status(400).json({ error: 'Token and new password required' });
+  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+  try {
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    const [rows] = await pool.query(
+      `SELECT id, user_id FROM password_reset_tokens
+       WHERE token_hash = ? AND used_at IS NULL AND expires_at > NOW()
+       LIMIT 1`,
+      [tokenHash]
+    );
+
+    if (rows.length === 0) {
+      return res.status(400).json({ error: 'This reset link is invalid or has expired. Please request a new one.' });
+    }
+
+    const { id: tokenId, user_id } = rows[0];
+    const password_hash = await bcrypt.hash(password, 10);
+
+    await pool.query('UPDATE users SET password_hash = ? WHERE user_id = ?', [password_hash, user_id]);
+    await pool.query('UPDATE password_reset_tokens SET used_at = NOW() WHERE id = ?', [tokenId]);
+    // Invalidate all active sessions — force re-login with new password
+    await pool.query('DELETE FROM user_sessions WHERE user_id = ?', [user_id]);
+
+    console.log(`[auth] password reset successful for user_id=${user_id}`);
+
+    res.json({ message: 'Password reset successfully. You can now log in with your new password.' });
+  } catch (err) {
+    console.error('resetPassword error:', err.message);
+    res.status(500).json({ error: 'Reset failed. Please try again.' });
   }
 };
 
