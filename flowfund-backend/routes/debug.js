@@ -44,4 +44,16 @@ router.get('/ai-health', async (_req, res) => {
   res.json(report);
 });
 
+// GET /api/debug/email-config — shows active email provider config (no secrets)
+router.get('/email-config', (_req, res) => {
+  res.json({
+    EMAIL_PROVIDER:       process.env.EMAIL_PROVIDER       || '(not set — defaults to resend)',
+    GMAIL_USER:           process.env.GMAIL_USER           ? process.env.GMAIL_USER : '(not set)',
+    GMAIL_APP_PASSWORD:   process.env.GMAIL_APP_PASSWORD   ? '✓ set' : '(not set)',
+    RESEND_API_KEY:       process.env.RESEND_API_KEY       ? '✓ set' : '(not set)',
+    FROM_EMAIL:           process.env.FROM_EMAIL           || '(not set — defaults to noreply@flowfund-ai.app)',
+    FRONTEND_URL:         process.env.FRONTEND_URL         || '(not set — defaults to http://localhost:3000)',
+  });
+});
+
 module.exports = router;
