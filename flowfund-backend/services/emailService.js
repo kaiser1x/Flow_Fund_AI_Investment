@@ -1,33 +1,57 @@
 /**
- * Email service — supports Gmail SMTP (via Nodemailer) and Resend API.
+ * Email service — supports Gmail REST API (via googleapis OAuth2) and Resend API.
  *
  * Switch providers with the EMAIL_PROVIDER env var:
- *   EMAIL_PROVIDER=gmail   → uses GMAIL_USER + GMAIL_APP_PASSWORD
- *   EMAIL_PROVIDER=resend  → uses RESEND_API_KEY  (default)
+ *   EMAIL_PROVIDER=gmail   → Gmail REST API over HTTPS (works on Railway)
+ *                            Requires: GMAIL_USER, GMAIL_CLIENT_ID,
+ *                                      GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN
+ *   EMAIL_PROVIDER=resend  → Resend API (default)
+ *                            Requires: RESEND_API_KEY
  *
- * If the active provider's credentials are missing, falls back to logging
- * the email content to server logs (dev mode only).
+ * If credentials are missing, falls back to logging (dev mode only).
  */
 require('dotenv').config();
-const nodemailer = require('nodemailer');
+const { google } = require('googleapis');
 
-// ── Internal: Gmail SMTP ──────────────────────────────────────────────────────
+// ── Internal: Gmail REST API (OAuth2) ────────────────────────────────────────
 
 async function sendViaGmail(to, from, subject, html) {
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
+  const clientId     = process.env.GMAIL_CLIENT_ID;
+  const clientSecret = process.env.GMAIL_CLIENT_SECRET;
+  const refreshToken = process.env.GMAIL_REFRESH_TOKEN;
+  const user         = process.env.GMAIL_USER;
 
-  if (!user || !pass) {
-    console.log(`[DEV EMAIL] Gmail creds missing. Would send "${subject}" to ${to}`);
+  if (!clientId || !clientSecret || !refreshToken || !user) {
+    const missing = ['GMAIL_CLIENT_ID', 'GMAIL_CLIENT_SECRET', 'GMAIL_REFRESH_TOKEN', 'GMAIL_USER']
+      .filter(k => !process.env[k]).join(', ');
+    console.log(`[DEV EMAIL] Gmail OAuth2 creds missing (${missing}). Would send "${subject}" to ${to}`);
     return;
   }
 
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user, pass },
-  });
+  const oauth2Client = new google.auth.OAuth2(
+    clientId,
+    clientSecret,
+    'https://developers.google.com/oauthplayground'
+  );
+  oauth2Client.setCredentials({ refresh_token: refreshToken });
 
-  await transporter.sendMail({ from, to, subject, html });
+  const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+
+  // RFC 2822 MIME message — Gmail API requires base64url encoding
+  const mime = [
+    `From: ${from}`,
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/html; charset=utf-8',
+    '',
+    html,
+  ].join('\r\n');
+
+  await gmail.users.messages.send({
+    userId: 'me',
+    requestBody: { raw: Buffer.from(mime).toString('base64url') },
+  });
 }
 
 // ── Internal: Resend API ──────────────────────────────────────────────────────
