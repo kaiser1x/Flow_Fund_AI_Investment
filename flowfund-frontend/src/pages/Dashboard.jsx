@@ -6,6 +6,7 @@ import { getTransactions } from '../api/transactions';
 import usePlaidLink from '../hooks/usePlaidLink';
 import ChatPanel from '../components/ChatPanel';
 import TransactionFeed from '../components/TransactionFeed';
+import HistoricalAnalysis from '../components/HistoricalAnalysis';
 import AppHeader, { LogoMark } from '../components/AppHeader';
 import { C } from '../theme/flowfundTheme';
 
@@ -492,6 +493,7 @@ export default function Dashboard() {
             />
             <TransactionFeed transactions={transactions} isDemo={isDemo} loading={txnLoading} />
             <InsightsCard transactions={transactions} isDemo={isDemo} />
+            <HistoricalAnalysis isDemo={isDemo} />
           </div>
 
           {/* Right column */}

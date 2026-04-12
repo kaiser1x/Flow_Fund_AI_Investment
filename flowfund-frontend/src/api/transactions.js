@@ -25,3 +25,4 @@ financialApi.interceptors.response.use(
 );
 
 export const getTransactions = () => financialApi.get('/transactions');
+export const getHistoricalAnalysis = (params) => financialApi.get('/historical', { params });

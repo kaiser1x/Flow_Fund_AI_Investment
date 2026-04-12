@@ -1,4 +1,5 @@
 const { buildSnapshot } = require('../services/snapshotService');
+const { buildHistorical } = require('../services/historicalService');
 const pool = require('../config/db');
 
 function getDemoTransactions() {
@@ -87,5 +88,19 @@ exports.getTransactions = async (req, res) => {
   } catch (err) {
     console.error('transactions error:', err.message);
     res.status(500).json({ error: 'Failed to fetch transactions' });
+  }
+};
+
+// GET /api/financial/historical
+exports.getHistorical = async (req, res) => {
+  try {
+    const result = await buildHistorical(req.user.user_id, req.query);
+    res.json(result);
+  } catch (err) {
+    if (err.statusCode === 400) {
+      return res.status(400).json({ error: err.message });
+    }
+    console.error('historical analysis error:', err.message);
+    res.status(500).json({ error: 'Failed to build historical analysis' });
   }
 };
