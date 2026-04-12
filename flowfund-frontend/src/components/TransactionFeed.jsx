@@ -1,14 +1,5 @@
-const CAT_ICONS = {
-  'Food & Drink':    '🍔',
-  'Groceries':       '🛒',
-  'Transportation':  '🚗',
-  'Entertainment':   '🎬',
-  'Shopping':        '🛍️',
-  'Health & Fitness':'💪',
-  'Education':       '📚',
-  'Income':          '💰',
-  'Transfer':        '💸',
-};
+import { parseTxnDate, ymdLocal } from '../utils/transactionDate';
+import { spendCategoryDisplay } from '../utils/spendCategoryDisplay';
 
 const C = {
   ink:    '#0f2d25',
@@ -23,17 +14,23 @@ const C = {
   rs:     '10px',
 };
 
-function getDateLabel(dateStr) {
+function getDateLabel(raw) {
+  const d = parseTxnDate(raw);
+  if (!d) return 'Unknown date';
   const today = new Date();
-  const todayStr     = today.toISOString().slice(0, 10);
-  const yest         = new Date(today); yest.setDate(yest.getDate() - 1);
-  const yesterStr    = yest.toISOString().slice(0, 10);
-  const weekAgo      = new Date(today); weekAgo.setDate(weekAgo.getDate() - 7);
+  const todayStr = ymdLocal(today);
+  const yest = new Date(today);
+  yest.setDate(yest.getDate() - 1);
+  const yesterStr = ymdLocal(yest);
+  const weekAgo = new Date(today);
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  weekAgo.setHours(0, 0, 0, 0);
 
-  if (dateStr === todayStr)  return 'Today';
-  if (dateStr === yesterStr) return 'Yesterday';
-  if (new Date(dateStr + 'T12:00:00') >= weekAgo) return 'This Week';
-  return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const ymd = ymdLocal(d);
+  if (ymd === todayStr) return 'Today';
+  if (ymd === yesterStr) return 'Yesterday';
+  if (d >= weekAgo) return 'This Week';
+  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
 function groupByDate(txns) {
@@ -46,7 +43,7 @@ function groupByDate(txns) {
   return map;
 }
 
-export default function TransactionFeed({ transactions, isDemo, loading, error }) {
+export default function TransactionFeed({ transactions, isDemo, hasBankLink = true, loading, error }) {
   if (loading) {
     return (
       <div style={{ background: '#fff', borderRadius: C.r, border: `1px solid ${C.border}`, boxShadow: C.shadow, overflow: 'hidden' }}>
@@ -101,8 +98,14 @@ export default function TransactionFeed({ transactions, isDemo, loading, error }
         {!error && transactions.length === 0 ? (
           <div style={{ padding: '48px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
             <div style={{ fontSize: '36px' }}>📭</div>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: C.ink }}>No transactions yet</div>
-            <div style={{ fontSize: '12px', color: C.muted }}>Connect a bank account to see your spending</div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: C.ink }}>
+              {!hasBankLink ? 'No accounts connected' : 'No transactions yet'}
+            </div>
+            <div style={{ fontSize: '12px', color: C.muted }}>
+              {!hasBankLink
+                ? 'Connect your bank on the dashboard to get started.'
+                : 'Sync from your bank or check back after new activity.'}
+            </div>
           </div>
         ) : (
           Array.from(groups.entries()).map(([label, txns]) => (
@@ -118,7 +121,9 @@ export default function TransactionFeed({ transactions, isDemo, loading, error }
               </div>
               {txns.map((txn, i) => {
                 const isIncome = txn.transaction_type === 'INCOME';
-                const icon = CAT_ICONS[txn.category] || '💳';
+                const { emoji, color: markColor } = spendCategoryDisplay(txn.category, isIncome);
+                const tint = isIncome ? 'rgba(5,150,105,0.1)' : `${markColor}14`;
+                const borderTint = isIncome ? 'rgba(5,150,105,0.22)' : `${markColor}35`;
                 const amt  = parseFloat(txn.amount || 0);
                 const merchant = txn.merchant || txn.description || 'Unknown';
 
@@ -134,15 +139,15 @@ export default function TransactionFeed({ transactions, isDemo, loading, error }
                     onMouseEnter={e => { e.currentTarget.style.background = '#f8faf9'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = ''; }}
                   >
-                    {/* Icon bubble */}
                     <div style={{
                       width: 38, height: 38, borderRadius: '11px', flexShrink: 0,
-                      background: isIncome ? 'rgba(5,150,105,0.08)' : '#f3f6f4',
-                      border: isIncome ? '1px solid rgba(5,150,105,0.18)' : `1px solid ${C.border}`,
+                      background: tint,
+                      border: `1px solid ${borderTint}`,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '17px',
+                      fontSize: '19px',
+                      lineHeight: 1,
                     }}>
-                      {icon}
+                      {emoji}
                     </div>
 
                     {/* Meta */}

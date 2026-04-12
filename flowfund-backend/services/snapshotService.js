@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { isCustomerFlowfundUserId } = require('./customerFlowfundDemo');
 
 /**
  * Builds a structured financial snapshot for a user from their stored
@@ -12,15 +13,46 @@ async function buildSnapshot(user_id) {
   const d90  = fmtDate(new Date(now - 90 * 86400000));
   const today = fmtDate(now);
 
-  // ── Check for linked accounts ───────────────────────────────────────────
+  // ── Linked Plaid item(s) and/or customer_flowfund manual demo account ────
   const [itemRows] = await pool.query(
     'SELECT COUNT(*) AS cnt FROM plaid_items WHERE user_id = ?',
     [user_id]
   );
-  const hasLinkedAccounts = itemRows[0].cnt > 0;
+  let hasLinkedAccounts = itemRows[0].cnt > 0;
 
   if (!hasLinkedAccounts) {
+    const demo = await isCustomerFlowfundUserId(user_id);
+    if (demo) {
+      const [acctRows] = await pool.query(
+        'SELECT COUNT(*) AS cnt FROM bank_accounts WHERE user_id = ?',
+        [user_id]
+      );
+      hasLinkedAccounts = acctRows[0].cnt > 0;
+    }
+  }
+
+  if (!hasLinkedAccounts) {
+    console.log(`[SNAPSHOT_GATE] user_id=${user_id} no linked accounts → no data`);
     return { hasData: false, reason: 'No linked bank accounts found.' };
+  }
+
+  // ── Check for actual transaction data ────────────────────────────────────
+  // Guard: even if accounts are linked, treat as no-data if no transactions
+  // exist yet (e.g. Plaid import pending / failed). Matches the dashboard,
+  // which shows an empty feed until transactions exist for this user.
+  const [txnCountRows] = await pool.query(
+    `SELECT COUNT(*) AS cnt
+     FROM transactions t
+     JOIN bank_accounts b ON t.account_id = b.account_id
+     WHERE b.user_id = ?
+       AND t.transaction_date >= ?`,
+    [user_id, d90]
+  );
+  const hasTransactions = txnCountRows[0].cnt > 0;
+  console.log(`[SNAPSHOT_GATE] user_id=${user_id} hasLinkedAccounts=true txnCount=${txnCountRows[0].cnt} hasTransactions=${hasTransactions}`);
+
+  if (!hasTransactions) {
+    return { hasData: false, reason: 'No transactions found in the last 90 days.' };
   }
 
   // ── Account summary ─────────────────────────────────────────────────────
@@ -37,6 +69,7 @@ async function buildSnapshot(user_id) {
   const spend90  = await sumExpenses(user_id, d90,  today);
   const priorSpend30 = await sumExpenses(user_id, d60, d30);
   const avgMonthlySpend = spend90 > 0 ? spend90 / 3 : 0;
+  console.log(`[SNAPSHOT_SPENDING] user_id=${user_id} source=db dateRange=${d30}→${today} spend30=${spend30} spend90=${spend90}`);
 
   // ── Top categories (90d) ────────────────────────────────────────────────
   const [catRows] = await pool.query(

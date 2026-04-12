@@ -7,6 +7,12 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import MarketAnalysis from './pages/MarketAnalysis';
+import ProfilePage from './pages/ProfilePage';
+import AlertSettingsPage from './pages/AlertSettingsPage';
+import InvestmentReadinessPage from './pages/InvestmentReadinessPage';
+import GoalsPage from './pages/GoalsPage';
+import SimulationsPage from './pages/SimulationsPage';
+import AdminSimulationPage from './pages/AdminSimulationPage';
 import { scheduleSessionExpiry } from './utils/session';
 
 function ProtectedRoute({ children }) {
@@ -75,6 +81,54 @@ export default function App() {
         element={
           <ProtectedRoute>
             <MarketAnalysis />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings/alerts"
+        element={
+          <ProtectedRoute>
+            <AlertSettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/investment-readiness"
+        element={
+          <ProtectedRoute>
+            <InvestmentReadinessPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/goals"
+        element={
+          <ProtectedRoute>
+            <GoalsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/simulations"
+        element={
+          <ProtectedRoute>
+            <SimulationsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/sim"
+        element={
+          <ProtectedRoute>
+            <AdminSimulationPage />
           </ProtectedRoute>
         }
       />

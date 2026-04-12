@@ -1,3 +1,5 @@
+import { parseTxnDate } from '../utils/transactionDate';
+
 const CATEGORY_ICONS = {
   'Food & Drink': '🍔',
   'Groceries': '🛒',
@@ -12,10 +14,11 @@ const CATEGORY_ICONS = {
 function computeSummary(transactions, accounts) {
   const now = new Date();
   const d30 = new Date(now - 30 * 86400000);
+  d30.setHours(0, 0, 0, 0);
 
   const expenses30 = transactions.filter((t) => {
-    const d = new Date(t.transaction_date + 'T12:00:00');
-    return t.transaction_type === 'EXPENSE' && d >= d30;
+    const d = parseTxnDate(t.transaction_date);
+    return t.transaction_type === 'EXPENSE' && d && !Number.isNaN(d.getTime()) && d >= d30;
   });
 
   const monthlySpend = expenses30.reduce((s, t) => s + parseFloat(t.amount || 0), 0);
@@ -31,8 +34,8 @@ function computeSummary(transactions, accounts) {
 
   const income30 = transactions
     .filter((t) => {
-      const d = new Date(t.transaction_date + 'T12:00:00');
-      return t.transaction_type === 'INCOME' && d >= d30;
+      const d = parseTxnDate(t.transaction_date);
+      return t.transaction_type === 'INCOME' && d && !Number.isNaN(d.getTime()) && d >= d30;
     })
     .reduce((s, t) => s + parseFloat(t.amount || 0), 0);
 

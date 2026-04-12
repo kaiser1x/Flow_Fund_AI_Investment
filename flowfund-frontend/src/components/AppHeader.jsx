@@ -1,5 +1,6 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { C } from '../theme/flowfundTheme';
+import NotificationBell from './NotificationBell';
 
 export function LogoMark() {
   return (
@@ -32,7 +33,8 @@ export function LogoMark() {
   );
 }
 
-export default function AppHeader({ profile, onLogout, liveData }) {
+export default function AppHeader({ profile, onLogout, liveData, isDemo = false }) {
+  const navigate = useNavigate();
   const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'User';
   const initials = [profile?.first_name, profile?.last_name]
     .filter(Boolean)
@@ -103,6 +105,8 @@ export default function AppHeader({ profile, onLogout, liveData }) {
         </NavLink>
       </nav>
 
+      <NotificationBell isDemo={isDemo} />
+
       <div
         style={{
           display: 'flex',
@@ -130,37 +134,49 @@ export default function AppHeader({ profile, onLogout, liveData }) {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-        <div
+        {/* Avatar + name — clicking navigates to /profile (no visual change) */}
+        <button
+          type="button"
+          onClick={() => navigate('/profile')}
           style={{
-            width: 32,
-            height: 32,
-            borderRadius: '50%',
-            flexShrink: 0,
-            background: C.accentFade,
-            border: '2px solid rgba(26,77,62,0.3)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '12px',
-            fontWeight: 700,
-            color: C.brand,
+            display: 'flex', alignItems: 'center', gap: '8px',
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            padding: 0,
           }}
+          title="View profile"
         >
-          {initials}
-        </div>
-        <span
-          style={{
-            fontSize: '13px',
-            color: C.ink,
-            fontWeight: 500,
-            whiteSpace: 'nowrap',
-            maxWidth: '140px',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {name}
-        </span>
+          <div
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              flexShrink: 0,
+              background: C.accentFade,
+              border: '2px solid rgba(26,77,62,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '12px',
+              fontWeight: 700,
+              color: C.brand,
+            }}
+          >
+            {initials}
+          </div>
+          <span
+            style={{
+              fontSize: '13px',
+              color: C.ink,
+              fontWeight: 500,
+              whiteSpace: 'nowrap',
+              maxWidth: '140px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {name}
+          </span>
+        </button>
         <button
           type="button"
           onClick={onLogout}

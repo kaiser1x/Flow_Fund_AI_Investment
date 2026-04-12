@@ -1,0 +1,71 @@
+{
+  "version": "2",
+  "seed": "flowfund-prof-demo-2026",
+  "override_accounts": [
+    {
+      "type": "depository",
+      "subtype": "checking",
+      "starting_balance": 4850,
+      "currency": "USD",
+      "meta": {
+        "name": "FlowFund Demo Checking",
+        "official_name": "FlowFund Demo Checking",
+        "mask": "9900"
+      },
+      "identity": {
+        "names": ["Alex Presenter"],
+        "emails": [
+          {
+            "primary": true,
+            "type": "primary",
+            "data": "demo@flowfund.example"
+          }
+        ]
+      },
+      "transactions": [
+        {
+          "date_transacted": "2026-04-01",
+          "date_posted": "2026-04-01",
+          "currency": "USD",
+          "amount": -3200,
+          "description": "ACME PAYROLL"
+        },
+        {
+          "date_transacted": "2026-04-02",
+          "date_posted": "2026-04-02",
+          "currency": "USD",
+          "amount": 89.12,
+          "description": "WHOLE FOODS MARKET"
+        },
+        {
+          "date_transacted": "2026-04-03",
+          "date_posted": "2026-04-03",
+          "currency": "USD",
+          "amount": 42.5,
+          "description": "SHELL GAS STATION"
+        },
+        {
+          "date_transacted": "2026-04-05",
+          "date_posted": "2026-04-05",
+          "currency": "USD",
+          "amount": 18.75,
+          "description": "CAMPUS COFFEE"
+        },
+        {
+          "date_transacted": "2026-04-07",
+          "date_posted": "2026-04-07",
+          "currency": "USD",
+          "amount": 120,
+          "description": "ELECTRIC UTILITY"
+        },
+        {
+          "date_transacted": "2026-04-09",
+          "date_posted": "2026-04-09",
+          "currency": "USD",
+          "amount": 64.2,
+          "description": "NETFLIX AND STREAMING"
+        }
+      ]
+    }
+  ]
+}

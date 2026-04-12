@@ -38,6 +38,7 @@ export const register       = (data) => authApi.post('/register', data);
 export const login          = (data) => authApi.post('/login', data);
 export const logout         = () => authApi.post('/logout');
 export const getProfile     = () => authApi.get('/profile');
+export const updateProfile  = (data) => authApi.patch('/profile', data);
 export const verifyOtp      = (data) => authApi.post('/verify-otp', data);
 export const resendOtp      = (data) => authApi.post('/resend-otp', data);
 export const forgotPassword = (data) => authApi.post('/forgot-password', data);
