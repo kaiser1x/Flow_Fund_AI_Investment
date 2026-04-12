@@ -292,30 +292,20 @@ function insertResult(id){ return { insertId: id }; }
   // ── GROUP 6: GET /api/simulations (snapshots) ────────────────────────────────
   console.log('\nGroup 6 — GET /api/simulations');
 
-  await test('No snapshots in DB → returns demo, source=demo', async () => {
+  await test('No snapshots in DB → returns empty, source=empty', async () => {
     const { getSnapshots } = loadController(makeMockPool([noRows()]));
     const { req, res, captured } = mockReqRes();
     await getSnapshots(req, res);
-    assert.strictEqual(captured.data.source, 'demo');
-    assert.ok(captured.data.snapshots.length > 0);
+    assert.strictEqual(captured.data.source, 'empty');
+    assert.strictEqual(captured.data.snapshots.length, 0);
   });
 
-  await test('Demo has one snapshot of each scenario type', async () => {
-    const { getSnapshots } = loadController(makeMockPool([noRows()]));
-    const { req, res, captured } = mockReqRes();
-    await getSnapshots(req, res);
-    const types = captured.data.snapshots.map(s => s.scenario_type);
-    assert.ok(types.includes('compound_interest'));
-    assert.ok(types.includes('stock_market'));
-    assert.ok(types.includes('debt_payoff'));
-    assert.ok(types.includes('emergency_fund'));
-  });
-
-  await test('DB error → graceful demo fallback', async () => {
+  await test('DB error → graceful empty fallback', async () => {
     const { getSnapshots } = loadController(makeMockPool([new Error('DB down')]));
     const { req, res, captured } = mockReqRes();
     await getSnapshots(req, res);
-    assert.strictEqual(captured.data.source, 'demo');
+    assert.strictEqual(captured.data.source, 'empty');
+    assert.strictEqual(captured.data.snapshots.length, 0);
   });
 
   // ── GROUP 7: POST /api/simulations/save ──────────────────────────────────────

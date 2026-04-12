@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getProfile, logout as logoutApi } from '../api/auth';
-import { getAccounts } from '../api/plaid';
+import { getAccounts, syncPlaidFromBank, sandboxRefreshPlaidTransactions, disconnectPlaidLink } from '../api/plaid';
+import { getDemoCustomerAccounts } from '../api/financial';
 import { getTransactions } from '../api/transactions';
 import usePlaidLink from '../hooks/usePlaidLink';
 import ChatPanel from '../components/ChatPanel';
@@ -11,6 +12,8 @@ import InvestmentReadinessWidget from '../components/InvestmentReadinessWidget';
 import GoalsWidget from '../components/GoalsWidget';
 import SimulationsWidget from '../components/SimulationsWidget';
 import { C } from '../theme/flowfundTheme';
+import { parseTxnDate } from '../utils/transactionDate';
+import { spendCategoryDisplay } from '../utils/spendCategoryDisplay';
 
 // ─── Inject keyframe animations ─────────────────────────────────────────────
 function useKeyframes() {
@@ -144,7 +147,13 @@ function ProfileCard({ profile, accountsCount, onNavigateToProfile }) {
 }
 
 // ─── BankAccountsCard ─────────────────────────────────────────────────────────
-function BankAccountsCard({ accounts, accountsLoading, accountsError, successMessage, plaidError, onOpenPlaid, onRetry, loadingToken, linking, ready }) {
+function BankAccountsCard({
+  accounts, accountsLoading, accountsError, accountsErrorCode, successMessage, plaidError, onOpenPlaid, onRetry,
+  loadingToken, linking, ready, onSyncFromBank, onSandboxRefresh, syncLoading,
+  onDisconnectBank, disconnectLoading,
+  hasPlaidLinked, disconnectStep = 0,
+  onDisconnectBankStepClick, onDisconnectModalCancel, onDisconnectFinalConfirm,
+}) {
   return (
     <div style={{
       background: C.surface, borderRadius: C.r,
@@ -153,7 +162,7 @@ function BankAccountsCard({ accounts, accountsLoading, accountsError, successMes
     }}>
       <div style={{
         padding: '18px 24px', borderBottom: `1px solid ${C.border}`,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap',
       }}>
         <div>
           <div style={{ fontSize: '16px', fontWeight: 700, color: C.ink }}>Bank Accounts</div>
@@ -161,23 +170,62 @@ function BankAccountsCard({ accounts, accountsLoading, accountsError, successMes
             {accounts.length > 0 ? `${accounts.length} connected` : 'No accounts yet'}
           </div>
         </div>
-        <button
-          onClick={onOpenPlaid}
-          disabled={loadingToken || linking || !ready}
-          style={{
-            padding: '8px 18px',
-            background: (loadingToken || linking || !ready) ? '#dde4e1' : C.brand,
-            color: (loadingToken || linking || !ready) ? C.faint : '#fff',
-            border: 'none', borderRadius: C.rs,
-            fontSize: '13px', fontWeight: 600,
-            cursor: (loadingToken || linking || !ready) ? 'not-allowed' : 'pointer',
-            whiteSpace: 'nowrap',
-          }}
-          onMouseEnter={e => { if (!loadingToken && !linking && ready) e.currentTarget.style.background = C.brand2; }}
-          onMouseLeave={e => { if (!loadingToken && !linking && ready) e.currentTarget.style.background = C.brand; }}
-        >
-          {loadingToken ? 'Preparing…' : linking ? 'Linking…' : '+ Connect Bank'}
-        </button>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'flex-end' }}>
+          {accounts.length > 0 && onSyncFromBank && (
+            <button
+              type="button"
+              onClick={onSyncFromBank}
+              disabled={syncLoading || linking}
+              style={{
+                padding: '8px 14px',
+                background: syncLoading || linking ? '#dde4e1' : '#f0f4f2',
+                color: C.ink,
+                border: `1px solid ${C.border}`, borderRadius: C.rs,
+                fontSize: '12px', fontWeight: 600,
+                cursor: syncLoading || linking ? 'not-allowed' : 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {syncLoading ? 'Syncing…' : 'Sync latest'}
+            </button>
+          )}
+          {accounts.length > 0 && onSandboxRefresh && (
+            <button
+              type="button"
+              onClick={onSandboxRefresh}
+              disabled={syncLoading || linking}
+              title="Uses Plaid /transactions/refresh — best for Sandbox (e.g. user_transactions_dynamic)"
+              style={{
+                padding: '8px 14px',
+                background: syncLoading || linking ? '#dde4e1' : '#f7f5ff',
+                color: '#5b21b6',
+                border: '1px solid rgba(91,33,182,0.25)', borderRadius: C.rs,
+                fontSize: '12px', fontWeight: 600,
+                cursor: syncLoading || linking ? 'not-allowed' : 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Sandbox refresh
+            </button>
+          )}
+          <button
+            onClick={onOpenPlaid}
+            disabled={loadingToken || linking || !ready}
+            style={{
+              padding: '8px 18px',
+              background: (loadingToken || linking || !ready) ? '#dde4e1' : C.brand,
+              color: (loadingToken || linking || !ready) ? C.faint : '#fff',
+              border: 'none', borderRadius: C.rs,
+              fontSize: '13px', fontWeight: 600,
+              cursor: (loadingToken || linking || !ready) ? 'not-allowed' : 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={e => { if (!loadingToken && !linking && ready) e.currentTarget.style.background = C.brand2; }}
+            onMouseLeave={e => { if (!loadingToken && !linking && ready) e.currentTarget.style.background = C.brand; }}
+          >
+            {loadingToken ? 'Preparing…' : linking ? 'Linking…' : '+ Connect Bank'}
+          </button>
+        </div>
       </div>
 
       <div style={{ padding: '16px 24px' }}>
@@ -205,7 +253,32 @@ function BankAccountsCard({ accounts, accountsLoading, accountsError, successMes
             }}>Retry</button>
           </div>
         )}
-        {accountsError && <p style={{ fontSize: '13px', color: C.danger, margin: '0 0 12px' }}>{accountsError}</p>}
+        {accountsError && (
+          <div style={{ margin: '0 0 12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <p style={{ fontSize: '13px', color: C.danger, margin: 0 }}>{accountsError}</p>
+            {accountsErrorCode === 'PLAID_TOKEN_DECRYPT' && onDisconnectBank && (
+              <button
+                type="button"
+                onClick={onDisconnectBank}
+                disabled={disconnectLoading}
+                style={{
+                  alignSelf: 'flex-start',
+                  padding: '8px 14px',
+                  background: C.danger,
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: C.rs,
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: disconnectLoading ? 'not-allowed' : 'pointer',
+                  opacity: disconnectLoading ? 0.75 : 1,
+                }}
+              >
+                {disconnectLoading ? 'Removing…' : 'Remove broken bank link'}
+              </button>
+            )}
+          </div>
+        )}
 
         {accountsLoading ? (
           [1, 2].map(i => (
@@ -218,7 +291,7 @@ function BankAccountsCard({ accounts, accountsLoading, accountsError, successMes
           ))
         ) : accounts.length === 0 ? (
           <div style={{ padding: '28px 0', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-            <div style={{ fontSize: '36px' }}>🏦</div>
+            <div style={{ fontSize: '36px', lineHeight: 1 }}>🏦</div>
             <div style={{ fontSize: '14px', fontWeight: 600, color: C.ink }}>No accounts connected</div>
             <div style={{ fontSize: '12px', color: C.muted }}>Connect your bank to unlock real insights</div>
           </div>
@@ -233,7 +306,8 @@ function BankAccountsCard({ accounts, accountsLoading, accountsError, successMes
                 <div style={{
                   width: 36, height: 36, borderRadius: '10px', flexShrink: 0,
                   background: `linear-gradient(135deg, ${C.brand} 0%, ${C.brand2} 100%)`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '18px', lineHeight: 1,
                 }}>
                   🏦
                 </div>
@@ -252,30 +326,129 @@ function BankAccountsCard({ accounts, accountsLoading, accountsError, successMes
             ))}
           </div>
         )}
+
+        {hasPlaidLinked && onDisconnectBankStepClick && onDisconnectFinalConfirm && !accountsLoading && (
+          <div style={{
+            marginTop: '18px', paddingTop: '16px',
+            borderTop: `1px dashed ${C.border}`,
+          }}>
+            {disconnectStep < 2 && (
+              <button
+                type="button"
+                onClick={onDisconnectBankStepClick}
+                disabled={disconnectLoading || linking || syncLoading}
+                style={{
+                  padding: '8px 12px',
+                  background: disconnectStep === 1 ? 'rgba(220,38,38,0.08)' : 'transparent',
+                  color: C.danger,
+                  border: `1px solid ${disconnectStep === 1 ? 'rgba(220,38,38,0.45)' : C.border}`,
+                  borderRadius: C.rs,
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: disconnectLoading || linking || syncLoading ? 'not-allowed' : 'pointer',
+                  opacity: disconnectLoading ? 0.75 : 1,
+                }}
+              >
+                {disconnectStep === 0 ? 'Disconnect bank (Plaid)' : 'Click again to open confirmation…'}
+              </button>
+            )}
+            {disconnectStep === 1 && (
+              <div style={{ fontSize: '11px', color: C.muted, marginTop: '8px', lineHeight: 1.4 }}>
+                Or wait — this will reset in a few seconds if you change your mind.
+              </div>
+            )}
+          </div>
+        )}
+
+        {disconnectStep === 2 && onDisconnectModalCancel && onDisconnectFinalConfirm && (
+          <div
+            role="presentation"
+            style={{
+              position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)',
+              zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '20px',
+            }}
+            onClick={onDisconnectModalCancel}
+            onKeyDown={(e) => e.key === 'Escape' && onDisconnectModalCancel()}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="ff-disconnect-title"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                maxWidth: 400, width: '100%',
+                background: C.surface,
+                borderRadius: C.r,
+                border: `1px solid ${C.border}`,
+                boxShadow: '0 20px 50px rgba(0,0,0,0.18)',
+                padding: '22px 22px 18px',
+              }}
+            >
+              <div id="ff-disconnect-title" style={{ fontSize: '16px', fontWeight: 700, color: C.ink, marginBottom: '10px' }}>
+                Disconnect bank?
+              </div>
+              <p style={{ fontSize: '13px', color: C.muted, lineHeight: 1.55, margin: '0 0 18px' }}>
+                This removes your Plaid link and deletes Plaid-imported accounts and transactions from FlowFund.
+                Your FlowFund Customer Demo manual account (if any) stays. You can reconnect anytime.
+              </p>
+              <p style={{ fontSize: '12px', fontWeight: 600, color: C.danger, margin: '0 0 18px' }}>
+                Click &ldquo;Disconnect bank&rdquo; below one more time to confirm.
+              </p>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={onDisconnectModalCancel}
+                  disabled={disconnectLoading}
+                  style={{
+                    padding: '10px 16px',
+                    background: 'transparent',
+                    border: `1px solid ${C.border}`,
+                    borderRadius: C.rs,
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: C.muted,
+                    cursor: disconnectLoading ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={onDisconnectFinalConfirm}
+                  disabled={disconnectLoading}
+                  style={{
+                    padding: '10px 16px',
+                    background: disconnectLoading ? '#fca5a5' : C.danger,
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: C.rs,
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: disconnectLoading ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {disconnectLoading ? 'Disconnecting…' : 'Disconnect bank'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 // ─── InsightsCard ─────────────────────────────────────────────────────────────
-const CAT_META = {
-  'Food & Drink':    ['🍔', '#f59e0b'],
-  'Groceries':       ['🛒', '#10b981'],
-  'Shopping':        ['🛍️', '#8b5cf6'],
-  'Transportation':  ['🚗', '#3b82f6'],
-  'Entertainment':   ['🎬', '#ec4899'],
-  'Health & Fitness':['💪', '#06b6d4'],
-  'Education':       ['📚', '#f97316'],
-  'Transfer':        ['💸', '#6b7280'],
-};
-
-function InsightsCard({ transactions, isDemo }) {
+function InsightsCard({ transactions, isDemo, hasBankLink }) {
   const now = new Date();
   const d30 = new Date(now - 30 * 86400000);
-  const expenses = transactions.filter(t =>
-    t.transaction_type === 'EXPENSE' &&
-    new Date(t.transaction_date + 'T12:00:00') >= d30
-  );
+  d30.setHours(0, 0, 0, 0);
+  const expenses = transactions.filter((t) => {
+    if (t.transaction_type !== 'EXPENSE') return false;
+    const d = parseTxnDate(t.transaction_date);
+    return d && !Number.isNaN(d.getTime()) && d >= d30;
+  });
   const total = expenses.reduce((s, t) => s + parseFloat(t.amount || 0), 0);
   const catMap = {};
   for (const t of expenses) {
@@ -312,13 +485,17 @@ function InsightsCard({ transactions, isDemo }) {
       <div style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
         {cats.length === 0 ? (
           <div style={{ padding: '28px 0', textAlign: 'center', color: C.faint, fontSize: '14px' }}>
-            No spending data to display yet
+            {!hasBankLink
+              ? 'No accounts connected. Connect your bank to start.'
+              : 'No spending data to display yet'}
           </div>
         ) : cats.map(({ label, amt, pct }) => {
-          const [icon, color] = CAT_META[label] || ['💳', C.brand2];
+          const { emoji, color } = spendCategoryDisplay(label, false);
           return (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '15px', width: '20px', textAlign: 'center', flexShrink: 0 }}>{icon}</span>
+              <span style={{ fontSize: '22px', width: '32px', textAlign: 'center', flexShrink: 0, lineHeight: 1 }}>
+                {emoji}
+              </span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
                   <span style={{ fontSize: '13px', fontWeight: 600, color: C.ink }}>{label}</span>
@@ -351,9 +528,14 @@ export default function Dashboard() {
   const [accounts, setAccounts] = useState([]);
   const [accountsLoading, setAccountsLoading] = useState(false);
   const [accountsError, setAccountsError] = useState('');
+  const [accountsErrorCode, setAccountsErrorCode] = useState(null);
+  const [disconnectLoading, setDisconnectLoading] = useState(false);
+  const [disconnectStep, setDisconnectStep] = useState(0);
   const [transactions, setTransactions] = useState([]);
   const [txnLoading, setTxnLoading] = useState(true);
-  const [isDemo, setIsDemo] = useState(false);
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [readinessRefresh, setReadinessRefresh] = useState(0);
+  const bumpReadiness = useCallback(() => setReadinessRefresh((n) => n + 1), []);
   const [vw, setVw] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
   useEffect(() => {
@@ -364,14 +546,59 @@ export default function Dashboard() {
   const isMobile  = vw < 640;
   const isTablet  = vw < 1024;
 
+  const hasPlaidLinked = useMemo(
+    () => accounts.some((a) => Boolean(a.plaid_account_id)),
+    [accounts]
+  );
+
+  useEffect(() => {
+    if (disconnectStep !== 1) return undefined;
+    const id = setTimeout(() => setDisconnectStep(0), 12000);
+    return () => clearTimeout(id);
+  }, [disconnectStep]);
+
+  useEffect(() => {
+    if (!hasPlaidLinked) setDisconnectStep(0);
+  }, [hasPlaidLinked]);
+
+  const onDisconnectBankStepClick = useCallback(() => {
+    setDisconnectStep((s) => (s === 0 ? 1 : s === 1 ? 2 : s));
+  }, []);
+
   const fetchAccounts = useCallback(async () => {
     setAccountsLoading(true);
     setAccountsError('');
+    setAccountsErrorCode(null);
+    const mergeDemoManual = async (plaidList) => {
+      const base = [...(plaidList || [])];
+      try {
+        const { data: dem } = await getDemoCustomerAccounts();
+        const plaidKeys = new Set(base.map((a) => a.plaid_account_id).filter(Boolean));
+        for (const a of dem.accounts || []) {
+          if (!plaidKeys.has(a.plaid_account_id)) base.push(a);
+        }
+      } catch (_) {}
+      return base;
+    };
     try {
       const { data } = await getAccounts();
-      setAccounts(data.accounts || []);
+      let merged = await mergeDemoManual(data.accounts || []);
+      if (merged.length === 0) {
+        try {
+          const { data: demOnly } = await getDemoCustomerAccounts();
+          merged = demOnly.accounts || [];
+        } catch (_) {}
+      }
+      setAccounts(merged);
     } catch (err) {
       setAccountsError(err.response?.data?.error || 'Failed to load accounts');
+      setAccountsErrorCode(err.response?.data?.code || null);
+      try {
+        const { data: demOnly } = await getDemoCustomerAccounts();
+        setAccounts(demOnly.accounts || []);
+      } catch (_) {
+        setAccounts([]);
+      }
     } finally {
       setAccountsLoading(false);
     }
@@ -382,7 +609,6 @@ export default function Dashboard() {
     try {
       const { data } = await getTransactions();
       setTransactions(data.transactions || []);
-      setIsDemo(data.isDemo || false);
     } catch (_) {
       setTransactions([]);
     } finally {
@@ -390,7 +616,57 @@ export default function Dashboard() {
     }
   }, []);
 
-  const { openPlaid, ready, loadingToken, linking, error: plaidError, successMessage, retryLinkToken } = usePlaidLink(fetchAccounts);
+  const handleDisconnectBank = useCallback(async () => {
+    setDisconnectLoading(true);
+    try {
+      await disconnectPlaidLink();
+      setDisconnectStep(0);
+      setAccountsError('');
+      setAccountsErrorCode(null);
+      await fetchAccounts();
+      await fetchTransactions();
+      bumpReadiness();
+    } catch (err) {
+      setAccountsError(err.response?.data?.error || 'Could not remove bank link');
+    } finally {
+      setDisconnectLoading(false);
+    }
+  }, [fetchAccounts, fetchTransactions, bumpReadiness]);
+
+  const onBankLinked = useCallback(async () => {
+    await fetchAccounts();
+    await fetchTransactions();
+    bumpReadiness();
+  }, [fetchAccounts, fetchTransactions, bumpReadiness]);
+
+  const handleSyncFromBank = useCallback(async () => {
+    setSyncLoading(true);
+    try {
+      await syncPlaidFromBank();
+      await fetchAccounts();
+      await fetchTransactions();
+      bumpReadiness();
+    } catch (_) {
+      /* errors surfaced via accounts/transactions state if needed */
+    } finally {
+      setSyncLoading(false);
+    }
+  }, [fetchAccounts, fetchTransactions, bumpReadiness]);
+
+  const handleSandboxRefresh = useCallback(async () => {
+    setSyncLoading(true);
+    try {
+      await sandboxRefreshPlaidTransactions();
+      await fetchAccounts();
+      await fetchTransactions();
+      bumpReadiness();
+    } catch (_) {
+    } finally {
+      setSyncLoading(false);
+    }
+  }, [fetchAccounts, fetchTransactions, bumpReadiness]);
+
+  const { openPlaid, ready, loadingToken, linking, error: plaidError, successMessage, retryLinkToken } = usePlaidLink(onBankLinked);
 
   useEffect(() => {
     getProfile()
@@ -410,14 +686,19 @@ export default function Dashboard() {
   // ── Derived stats ──────────────────────────────────────────────────────────
   const now = new Date();
   const d30 = new Date(now - 30 * 86400000);
-  const expenses30 = transactions.filter(t =>
-    t.transaction_type === 'EXPENSE' &&
-    new Date(t.transaction_date + 'T12:00:00') >= d30
-  );
-  const income30 = transactions.filter(t =>
-    t.transaction_type === 'INCOME' &&
-    new Date(t.transaction_date + 'T12:00:00') >= d30
-  ).reduce((s, t) => s + parseFloat(t.amount || 0), 0);
+  d30.setHours(0, 0, 0, 0);
+  const expenses30 = transactions.filter((t) => {
+    if (t.transaction_type !== 'EXPENSE') return false;
+    const d = parseTxnDate(t.transaction_date);
+    return d && !Number.isNaN(d.getTime()) && d >= d30;
+  });
+  const income30 = transactions
+    .filter((t) => {
+      if (t.transaction_type !== 'INCOME') return false;
+      const d = parseTxnDate(t.transaction_date);
+      return d && !Number.isNaN(d.getTime()) && d >= d30;
+    })
+    .reduce((s, t) => s + parseFloat(t.amount || 0), 0);
   const monthlySpend = expenses30.reduce((s, t) => s + parseFloat(t.amount || 0), 0);
   const totalBalance = accounts.reduce((s, a) => s + parseFloat(a.balance || 0), 0);
   const catMap = {};
@@ -445,7 +726,7 @@ export default function Dashboard() {
       minHeight: '100vh', background: C.bg,
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     }}>
-      <AppHeader profile={profile} onLogout={handleLogout} liveData={!isDemo} isDemo={isDemo} />
+      <AppHeader profile={profile} onLogout={handleLogout} liveData={accounts.length > 0} isDemo={false} />
 
       <div style={{
         maxWidth: '1280px', margin: '0 auto',
@@ -494,20 +775,36 @@ export default function Dashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <BankAccountsCard
               accounts={accounts} accountsLoading={accountsLoading} accountsError={accountsError}
+              accountsErrorCode={accountsErrorCode}
               successMessage={successMessage} plaidError={plaidError}
               onOpenPlaid={openPlaid} onRetry={retryLinkToken}
               loadingToken={loadingToken} linking={linking} ready={ready}
+              onSyncFromBank={handleSyncFromBank}
+              onSandboxRefresh={handleSandboxRefresh}
+              syncLoading={syncLoading}
+              onDisconnectBank={handleDisconnectBank}
+              disconnectLoading={disconnectLoading}
+              hasPlaidLinked={hasPlaidLinked}
+              disconnectStep={disconnectStep}
+              onDisconnectBankStepClick={onDisconnectBankStepClick}
+              onDisconnectModalCancel={() => setDisconnectStep(0)}
+              onDisconnectFinalConfirm={handleDisconnectBank}
             />
-            <TransactionFeed transactions={transactions} isDemo={isDemo} loading={txnLoading} />
-            <InsightsCard transactions={transactions} isDemo={isDemo} />
+            <TransactionFeed
+              transactions={transactions}
+              isDemo={false}
+              hasBankLink={accounts.length > 0}
+              loading={txnLoading}
+            />
+            <InsightsCard transactions={transactions} isDemo={false} hasBankLink={accounts.length > 0} />
           </div>
 
           {/* Right column */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             <ProfileCard profile={profile} accountsCount={accounts.length} onNavigateToProfile={() => navigate('/profile')} />
             <div style={{ position: 'sticky', top: '88px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-              <ChatPanel hasLinkedAccounts={accounts.length > 0} isDemo={isDemo} />
-              <InvestmentReadinessWidget />
+              <ChatPanel hasLinkedAccounts={accounts.length > 0} />
+              <InvestmentReadinessWidget refreshToken={readinessRefresh} />
               <GoalsWidget />
               <SimulationsWidget />
             </div>

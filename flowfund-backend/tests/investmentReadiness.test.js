@@ -153,34 +153,25 @@ function metricRow(o = {}) {
     assert.strictEqual(captured.data.source, 'db');
   });
 
-  // ── GROUP 3: demo fallback ──────────────────────────────────────────────────
-  console.log('\nGroup 3 — Demo fallback');
+  // ── GROUP 3: no stored metrics ───────────────────────────────────────────────
+  console.log('\nGroup 3 — No stored metrics');
 
-  await test('No DB rows → returns demo, source=demo', async () => {
+  await test('No DB rows → returns source=none, null score', async () => {
     const { getReadiness } = loadController(makeMockPool([[], []])); // empty scoreRows + metricRows
     const { req, res, captured } = mockReqRes();
     await getReadiness(req, res);
-    assert.strictEqual(captured.data.source, 'demo');
-    assert.ok(captured.data.score > 0, 'demo score must not be 0');
+    assert.strictEqual(captured.data.source, 'none');
+    assert.strictEqual(captured.data.score, null);
+    assert.ok(Array.isArray(captured.data.factors));
+    assert.strictEqual(captured.data.factors.length, 0);
   });
 
-  await test('Demo score is not hardcoded — equals 70 (computed from demo data)', async () => {
-    // Demo: income=1200, expenses=508.55, balance=1247.82
-    // savings_rate=57.6% (+30), buffer=2.45 months (no pts), volatility=0 (+20), has income (+20)
-    // Expected: 20+30+0+20 = 70
-    const { getReadiness } = loadController(makeMockPool([[], []]));
-    const { req, res, captured } = mockReqRes();
-    await getReadiness(req, res);
-    assert.strictEqual(captured.data.score, 70, `Expected demo score=70, got ${captured.data.score}`);
-    assert.strictEqual(captured.data.color_band, 'yellow');
-  });
-
-  await test('DB error → graceful demo fallback, never throws', async () => {
+  await test('DB error → graceful none fallback, never throws', async () => {
     const { getReadiness } = loadController(makeMockPool([new Error('DB down')]));
     const { req, res, captured } = mockReqRes();
     await getReadiness(req, res); // must not throw
-    assert.strictEqual(captured.data.source, 'demo');
-    assert.ok(typeof captured.data.score === 'number');
+    assert.strictEqual(captured.data.source, 'none');
+    assert.strictEqual(captured.data.score, null);
   });
 
   // ── GROUP 4: verdict strings ────────────────────────────────────────────────

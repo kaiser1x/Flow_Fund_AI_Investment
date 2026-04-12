@@ -1,6 +1,6 @@
 /**
  * Regression tests for snapshotService — bug fix:
- *   "Chatbot reports $0.00 when dashboard shows demo transactions"
+ *   Chatbot and dashboard should agree on whether real transaction data exists.
  *
  * Root cause: buildSnapshot() gated hasData on plaid_items count only.
  * Fix: also gate on actual transaction count in the last 90 days.
@@ -77,6 +77,7 @@ async function test(name, fn) {
   await test('No linked accounts → hasData: false', async () => {
     const pool = makeMockPool([
       [{ cnt: 0 }], // plaid_items COUNT
+      [{ email: 'regular_user@example.com' }], // customer_flowfund demo check (not demo)
     ]);
     const { buildSnapshot } = loadServiceWithPool(pool);
     const result = await buildSnapshot(42);
@@ -130,16 +131,14 @@ async function test(name, fn) {
     assert.strictEqual(demo.hasData, true);
   });
 
-  await test('Demo snapshot last30Days matches sum of demo transactions', async () => {
-    // getDemoTransactions() in financialController sums to exactly $508.55.
-    // buildDemoSnapshot() must use the same value so chatbot and dashboard agree.
+  await test('buildDemoSnapshot last30Days is consistent (test fixture)', async () => {
     const EXPECTED_DEMO_SPEND_30 = 508.55;
     const { buildDemoSnapshot } = loadServiceWithPool(makeMockPool([]));
     const demo = buildDemoSnapshot();
     assert.strictEqual(
       demo.spendingSummary.last30Days,
       EXPECTED_DEMO_SPEND_30,
-      `Demo snapshot last30Days must equal the sum of getDemoTransactions() expenses (${EXPECTED_DEMO_SPEND_30})`
+      `Fixture last30Days must be ${EXPECTED_DEMO_SPEND_30}`
     );
   });
 
@@ -164,7 +163,7 @@ async function test(name, fn) {
   // ── GROUP 3: error resilience ───────────────────────────────────────────────
   console.log('\nGroup 3 — error resilience');
 
-  await test('buildSnapshot throws on DB error → caller catches and uses demo', async () => {
+  await test('buildSnapshot throws on DB error → caller can return a safe response', async () => {
     // Simulate a DB failure on the first query (plaid_items)
     const pool = makeMockPool([new Error('Connection refused')]);
     const { buildSnapshot } = loadServiceWithPool(pool);
@@ -174,15 +173,14 @@ async function test(name, fn) {
     } catch (_) {
       threw = true;
     }
-    // chatController.js catches this and falls back to buildDemoSnapshot()
-    assert.ok(threw, 'buildSnapshot must propagate DB errors so chatController can catch them');
+    assert.ok(threw, 'buildSnapshot must propagate DB errors so chatController can respond without inventing data');
   });
 
   // ── GROUP 4: consistency check ──────────────────────────────────────────────
   console.log('\nGroup 4 — source-of-truth consistency');
 
-  await test('getDemoTransactions() expenses sum equals buildDemoSnapshot().last30Days', () => {
-    // Inline the demo transaction list (mirrors financialController.getDemoTransactions)
+  await test('Inline expense list sum equals buildDemoSnapshot().last30Days', () => {
+    // Matches the static demo snapshot used only in tests / legacy helpers
     const demoExpenses = [
       6.45, 24.50, 48.20, 15.49, 13.10, 67.30, 9.99, 42.15, 12.80, 45.00,
       8.75, 10.99, 53.20, 18.40, 7.99, 5.25, 29.99, 89.00,

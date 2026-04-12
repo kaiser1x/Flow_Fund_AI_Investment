@@ -16,14 +16,17 @@ app.use('/api/financial', require('./routes/financial'));
 app.use('/api/chat', require('./routes/chat'));
 app.use('/api/market', require('./routes/market'));
 app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/alerts', require('./routes/alerts'));
 app.use('/api/investment-readiness', require('./routes/investmentReadiness'));
 app.use('/api/goals', require('./routes/goals'));
 app.use('/api/simulations', require('./routes/simulations'));
 app.use('/api/debug', require('./routes/debug'));
+app.use('/api/admin-sim', require('./routes/adminSimulation'));
 
 app.listen(process.env.PORT || 5000, () => {
   console.log(`[STARTUP] Server running on port ${process.env.PORT || 5000}`);
   console.log(`[STARTUP] NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
+  console.log(`[STARTUP] ADMIN_SIM_PASSWORD override: ${!!(process.env.ADMIN_SIM_PASSWORD || '').trim()} (else default flowfundai123$)`);
   console.log(`[STARTUP] GEMINI_API_KEY present: ${!!process.env.GEMINI_API_KEY}`);
   console.log(`[STARTUP] GEMINI model: gemini-2.5-flash`);
   const avKey = (process.env.ALPHA_VANTAGE_API_KEY || process.env.ALPHAVANTAGE_API_KEY || '').trim();

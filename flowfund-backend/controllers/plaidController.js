@@ -3,30 +3,37 @@ const { Products, CountryCode } = require('plaid');
 const { encrypt, decrypt } = require('../utils/encrypt');
 const pool = require('../config/db');
 const metricsService = require('../services/metricsService');
+const { upsertAccountsFromPlaid } = require('../services/plaidAccountSync');
+const transactionSyncService = require('../services/transactionSyncService');
+const transactionInsightNotifications = require('../services/transactionInsightNotifications');
+const alertMonitorService = require('../services/alertMonitorService');
+const { toYyyyMmDd } = require('../utils/transactionDate');
+const { isCustomerFlowfundUserId } = require('../services/customerFlowfundDemo');
+
+function linkTokenPayload(req) {
+  const daysRaw = parseInt(process.env.PLAID_TRANSACTIONS_DAYS_REQUESTED || '90', 10);
+  const daysRequested = Number.isFinite(daysRaw) ? Math.min(730, Math.max(30, daysRaw)) : 90;
+
+  return {
+    user: { client_user_id: String(req.user.user_id) },
+    client_name: 'FlowFund AI',
+    products: [Products.Transactions],
+    country_codes: [CountryCode.Us],
+    language: 'en',
+    transactions: { days_requested: daysRequested },
+  };
+}
 
 // POST /api/plaid/create-link-token
 exports.createLinkToken = async (req, res) => {
   try {
     const plaidClient = getPlaidClient();
-    const response = await plaidClient.linkTokenCreate({
-      user: { client_user_id: String(req.user.user_id) },
-      client_name: 'FlowFund AI',
-      products: [Products.Transactions],
-      country_codes: [CountryCode.Us],
-      language: 'en',
-    });
-
+    const response = await plaidClient.linkTokenCreate(linkTokenPayload(req));
     res.json({ link_token: response.data.link_token });
   } catch (err) {
-    // Log the full Plaid error so it appears in Railway logs
     const plaidError = err?.response?.data;
     console.error('create-link-token error:', JSON.stringify(plaidError || err.message, null, 2));
-
-    // Surface Plaid's error_code and error_message for easier diagnosis
-    const detail = plaidError
-      ? `[${plaidError.error_code}] ${plaidError.error_message}`
-      : err.message;
-
+    const detail = plaidError ? `[${plaidError.error_code}] ${plaidError.error_message}` : err.message;
     res.status(500).json({ error: 'Failed to create link token', detail });
   }
 };
@@ -38,12 +45,9 @@ exports.exchangePublicToken = async (req, res) => {
 
   try {
     const plaidClient = getPlaidClient();
-
-    // Exchange public_token for access_token + plaid_item_id
     const exchangeResponse = await plaidClient.itemPublicTokenExchange({ public_token });
     const { access_token, item_id: plaid_item_id } = exchangeResponse.data;
 
-    // Fetch institution metadata to label the linked item
     const itemResponse = await plaidClient.itemGet({ access_token });
     const institutionId = itemResponse.data.item.institution_id;
 
@@ -56,10 +60,8 @@ exports.exchangePublicToken = async (req, res) => {
       institution_name = instResponse.data.institution.name;
     }
 
-    // Encrypt the access_token — never stored in plaintext
     const access_token_encrypted = encrypt(access_token);
 
-    // Persist the item; re-link updates the token without creating duplicates
     await pool.query(
       `INSERT INTO plaid_items
          (user_id, plaid_item_id, access_token_encrypted, institution_id, institution_name)
@@ -71,9 +73,22 @@ exports.exchangePublicToken = async (req, res) => {
       [req.user.user_id, plaid_item_id, access_token_encrypted, institutionId || null, institution_name]
     );
 
+    const syncResult = await transactionSyncService.syncOneItem({
+      userId: req.user.user_id,
+      plaidItemId: plaid_item_id,
+      accessToken: access_token,
+      institutionName: institution_name,
+    });
+    const metrics = await metricsService.calculate(req.user.user_id);
+
+    const imported = (syncResult.totalAdded || 0) + (syncResult.totalModified || 0);
+    void transactionInsightNotifications.runAfterTransactionSync(req.user.user_id, { imported });
+    void alertMonitorService.runAfterSync(req.user.user_id, { imported, metrics });
+
     res.status(201).json({
       message: 'Bank account linked successfully',
       institution_name,
+      metrics,
     });
   } catch (err) {
     console.error('exchange-public-token error:', err?.response?.data || err.message);
@@ -81,21 +96,10 @@ exports.exchangePublicToken = async (req, res) => {
   }
 };
 
-// Normalize Plaid account subtype to our ENUM values
-function normalizeAccountType(plaidSubtype) {
-  if (!plaidSubtype) return 'CHECKING';
-  const s = plaidSubtype.toLowerCase();
-  if (s === 'savings') return 'SAVINGS';
-  if (s.includes('credit')) return 'CREDIT';
-  return 'CHECKING';
-}
-
 // GET /api/plaid/accounts
 exports.getAccounts = async (req, res) => {
   try {
     const plaidClient = getPlaidClient();
-
-    // Load all linked items for this user
     const [items] = await pool.query(
       'SELECT plaid_item_id, access_token_encrypted, institution_name FROM plaid_items WHERE user_id = ?',
       [req.user.user_id]
@@ -108,33 +112,36 @@ exports.getAccounts = async (req, res) => {
     const allAccounts = [];
 
     for (const item of items) {
-      const access_token = decrypt(item.access_token_encrypted);
+      let access_token;
+      try {
+        access_token = decrypt(item.access_token_encrypted);
+      } catch (e) {
+        console.error('get-accounts decrypt error:', e.message);
+        return res.status(400).json({
+          error:
+            'Could not read your saved bank link (encryption key may have changed). Disconnect and connect your bank again.',
+          code: 'PLAID_TOKEN_DECRYPT',
+        });
+      }
+
       const response = await plaidClient.accountsGet({ access_token });
+      const plaidAccounts = response.data?.accounts || [];
 
-      for (const account of response.data.accounts) {
-        const accountType = normalizeAccountType(account.subtype);
-        const balance = account.balances.current ?? 0;
+      await upsertAccountsFromPlaid({
+        userId: req.user.user_id,
+        plaidItemId: item.plaid_item_id,
+        institutionName: item.institution_name,
+        accounts: plaidAccounts,
+      });
 
-        // Upsert into bank_accounts — re-fetch never duplicates
-        await pool.query(
-          `INSERT INTO bank_accounts
-             (user_id, bank_name, account_type, balance, plaid_account_id, plaid_item_id, mask)
-           VALUES (?, ?, ?, ?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE
-             bank_name    = VALUES(bank_name),
-             account_type = VALUES(account_type),
-             balance      = VALUES(balance),
-             mask         = VALUES(mask)`,
-          [
-            req.user.user_id,
-            item.institution_name || account.name,
-            accountType,
-            balance,
-            account.account_id,
-            item.plaid_item_id,
-            account.mask || null,
-          ]
-        );
+      for (const account of plaidAccounts) {
+        const balance = account.balances?.current ?? 0;
+        const accountType =
+          account.subtype?.toLowerCase() === 'savings'
+            ? 'SAVINGS'
+            : account.subtype?.toLowerCase().includes('credit')
+              ? 'CREDIT'
+              : 'CHECKING';
 
         allAccounts.push({
           plaid_account_id: account.account_id,
@@ -150,99 +157,159 @@ exports.getAccounts = async (req, res) => {
 
     res.json({ accounts: allAccounts });
   } catch (err) {
-    console.error('get-accounts error:', err?.response?.data || err.message);
-    res.status(500).json({ error: 'Failed to fetch accounts' });
+    const plaidBody = err?.response?.data;
+    console.error('get-accounts error:', plaidBody || err.stack || err.message);
+    const detail = plaidBody
+      ? `[${plaidBody.error_code || 'plaid'}] ${plaidBody.error_message || JSON.stringify(plaidBody)}`
+      : err.message;
+    res.status(500).json({ error: 'Failed to fetch accounts', detail });
   }
 };
 
-// GET /api/plaid/transactions
+async function fetchRecentTransactionsFromDb(userId, limit = 120) {
+  const [rows] = await pool.query(
+    `SELECT t.transaction_id,
+            t.plaid_transaction_id,
+            COALESCE(NULLIF(t.merchant_name, ''), t.description, 'Unknown') AS merchant,
+            t.amount, t.transaction_type, t.category,
+            t.transaction_date, COALESCE(t.pending, 0) AS pending
+     FROM transactions t
+     JOIN bank_accounts b ON t.account_id = b.account_id
+     WHERE b.user_id = ?
+     ORDER BY t.transaction_date DESC, t.transaction_id DESC
+     LIMIT ?`,
+    [userId, limit]
+  );
+  return rows;
+}
+
+// GET /api/plaid/transactions — full Plaid sync + DB read (backward compatible shape)
 exports.getTransactions = async (req, res) => {
   try {
-    const plaidClient = getPlaidClient();
-
-    const [items] = await pool.query(
-      'SELECT plaid_item_id, access_token_encrypted FROM plaid_items WHERE user_id = ?',
-      [req.user.user_id]
+    const { itemsSynced, perItem, metrics } = await transactionSyncService.syncAllItemsForUser(
+      req.user.user_id
     );
 
-    if (items.length === 0) return res.json({ imported: 0, transactions: [] });
+    const rows = await fetchRecentTransactionsFromDb(req.user.user_id);
+    const imported = perItem.reduce((s, p) => s + (p.totalAdded || 0) + (p.totalModified || 0), 0);
 
-    // Fetch account_id map: plaid_account_id -> our bank_accounts.account_id
-    const [bankAccounts] = await pool.query(
-      'SELECT account_id, plaid_account_id FROM bank_accounts WHERE user_id = ?',
-      [req.user.user_id]
-    );
-    const accountMap = {};
-    for (const row of bankAccounts) {
-      accountMap[row.plaid_account_id] = row.account_id;
-    }
+    const allTransactions = rows.map((r) => ({
+      plaid_transaction_id: r.plaid_transaction_id,
+      transaction_id: r.transaction_id,
+      merchant: r.merchant,
+      amount: parseFloat(r.amount),
+      transaction_type: r.transaction_type,
+      category: r.category,
+      transaction_date: toYyyyMmDd(r.transaction_date) || r.transaction_date,
+      pending: Boolean(r.pending),
+    }));
 
-    const endDate   = new Date().toISOString().slice(0, 10);
-    const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-
-    let totalImported = 0;
-    const allTransactions = [];
-
-    for (const item of items) {
-      const access_token = decrypt(item.access_token_encrypted);
-      const response = await plaidClient.transactionsGet({
-        access_token,
-        start_date: startDate,
-        end_date: endDate,
-      });
-
-      for (const txn of response.data.transactions) {
-        const accountId = accountMap[txn.account_id];
-        if (!accountId) continue; // account not yet synced — skip
-
-        // Plaid: positive amount = money leaving account (expense), negative = money coming in (income)
-        const amount          = Math.abs(txn.amount);
-        const transactionType = txn.amount < 0 ? 'INCOME' : 'EXPENSE';
-        const category        = txn.category?.[0] || 'Uncategorized';
-        const description     = txn.name || null;
-        const merchantName    = txn.merchant_name || null;
-        const pending         = txn.pending ? 1 : 0;
-        const transactionDate = txn.date;
-
-        await pool.query(
-          `INSERT INTO transactions
-             (account_id, amount, transaction_type, category, description,
-              transaction_date, plaid_transaction_id, merchant_name, pending, source)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'plaid')
-           ON DUPLICATE KEY UPDATE
-             amount           = VALUES(amount),
-             transaction_type = VALUES(transaction_type),
-             category         = VALUES(category),
-             description      = VALUES(description),
-             transaction_date = VALUES(transaction_date),
-             merchant_name    = VALUES(merchant_name),
-             pending          = VALUES(pending)`,
-          [accountId, amount, transactionType, category, description,
-           transactionDate, txn.transaction_id, merchantName, pending]
-        );
-
-        totalImported++;
-        allTransactions.push({
-          plaid_transaction_id: txn.transaction_id,
-          account_id: accountId,
-          amount,
-          transaction_type: transactionType,
-          category,
-          description,
-          merchant_name: merchantName,
-          pending: Boolean(pending),
-          transaction_date: transactionDate,
-        });
-      }
-    }
-
-    // Recalculate financial metrics and investment readiness after import
-    const metrics = await metricsService.calculate(req.user.user_id);
-
-    res.json({ imported: totalImported, transactions: allTransactions, metrics });
+    res.json({
+      imported,
+      itemsSynced,
+      perItem,
+      transactions: allTransactions,
+      metrics,
+    });
   } catch (err) {
     console.error('get-transactions error:', err?.response?.data || err.message);
     res.status(500).json({ error: 'Failed to import transactions' });
+  }
+};
+
+// POST /api/plaid/sync — same as GET /transactions (explicit “pull from Plaid”)
+exports.postSync = exports.getTransactions;
+
+// POST /api/plaid/transactions-refresh — Sandbox: ask Plaid for updates, then /transactions/sync
+exports.transactionsRefresh = async (req, res) => {
+  try {
+    const plaidClient = getPlaidClient();
+    const [items] = await pool.query(
+      'SELECT access_token_encrypted FROM plaid_items WHERE user_id = ?',
+      [req.user.user_id]
+    );
+
+    if (items.length === 0) {
+      return res.status(400).json({ error: 'No linked bank items' });
+    }
+
+    const refreshErrors = [];
+    for (const item of items) {
+      const access_token = decrypt(item.access_token_encrypted);
+      try {
+        await plaidClient.transactionsRefresh({ access_token });
+      } catch (err) {
+        const pe = err?.response?.data;
+        refreshErrors.push(pe?.error_code || err.message);
+        console.error('[PLAID_REFRESH]', pe || err.message);
+      }
+    }
+
+    const syncResult = await transactionSyncService.syncAllItemsForUser(req.user.user_id, {
+      notificationContext: 'explicit_pull',
+    });
+    const rows = await fetchRecentTransactionsFromDb(req.user.user_id);
+    const transactions = rows.map((r) => ({
+      ...r,
+      amount: parseFloat(r.amount),
+      pending: Boolean(r.pending),
+      transaction_date: toYyyyMmDd(r.transaction_date) || r.transaction_date,
+    }));
+
+    res.json({
+      message: 'Transactions refresh + sync complete',
+      refresh_errors: refreshErrors,
+      ...syncResult,
+      transactions,
+    });
+  } catch (err) {
+    console.error('transactions-refresh error:', err?.response?.data || err.message);
+    res.status(500).json({ error: 'Failed to refresh transactions' });
+  }
+};
+
+// DELETE /api/plaid/link — remove stored Plaid item(s), accounts, and their transactions (e.g. after key rotation)
+exports.disconnectPlaid = async (req, res) => {
+  const uid = req.user.user_id;
+  const preserveDemoManual = await isCustomerFlowfundUserId(uid);
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const acctSql = preserveDemoManual
+      ? 'SELECT account_id FROM bank_accounts WHERE user_id = ? AND plaid_account_id IS NOT NULL'
+      : 'SELECT account_id FROM bank_accounts WHERE user_id = ?';
+    const [acctRows] = await conn.query(acctSql, [uid]);
+    const ids = acctRows.map((r) => r.account_id);
+    if (ids.length) {
+      await conn.query('DELETE FROM transactions WHERE account_id IN (?)', [ids]);
+    }
+    const delAcctSql = preserveDemoManual
+      ? 'DELETE FROM bank_accounts WHERE user_id = ? AND plaid_account_id IS NOT NULL'
+      : 'DELETE FROM bank_accounts WHERE user_id = ?';
+    await conn.query(delAcctSql, [uid]);
+    await conn.query('DELETE FROM plaid_items WHERE user_id = ?', [uid]);
+    await conn.commit();
+
+    let metrics = null;
+    try {
+      const [[c]] = await pool.query('SELECT COUNT(*) AS n FROM bank_accounts WHERE user_id = ?', [uid]);
+      if ((c?.n || 0) > 0) {
+        metrics = await metricsService.calculate(uid);
+      }
+    } catch (mcErr) {
+      console.warn('[PLAID_DISCONNECT] metrics recalc:', mcErr.message);
+    }
+    try {
+      void alertMonitorService.runAfterSync(uid, { imported: 0, metrics });
+    } catch (_) {}
+
+    res.json({ ok: true, message: 'Bank link removed. Connect your bank again with the current app settings.' });
+  } catch (err) {
+    await conn.rollback();
+    console.error('disconnect-plaid error:', err.message);
+    res.status(500).json({ error: 'Failed to remove bank link' });
+  } finally {
+    conn.release();
   }
 };
 
@@ -250,7 +317,6 @@ exports.getTransactions = async (req, res) => {
 exports.getBalances = async (req, res) => {
   try {
     const plaidClient = getPlaidClient();
-
     const [items] = await pool.query(
       'SELECT access_token_encrypted, institution_name FROM plaid_items WHERE user_id = ?',
       [req.user.user_id]
@@ -261,10 +327,20 @@ exports.getBalances = async (req, res) => {
     const balances = [];
 
     for (const item of items) {
-      const access_token = decrypt(item.access_token_encrypted);
+      let access_token;
+      try {
+        access_token = decrypt(item.access_token_encrypted);
+      } catch (e) {
+        return res.status(400).json({
+          error:
+            'Could not read your saved bank link (encryption key may have changed). Disconnect and connect your bank again.',
+          code: 'PLAID_TOKEN_DECRYPT',
+        });
+      }
       const response = await plaidClient.accountsGet({ access_token });
+      const plaidAccounts = response.data?.accounts || [];
 
-      for (const account of response.data.accounts) {
+      for (const account of plaidAccounts) {
         balances.push({
           name: account.name,
           mask: account.mask,

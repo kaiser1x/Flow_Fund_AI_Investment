@@ -5,9 +5,11 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import MarketAnalysis from './pages/MarketAnalysis';
 import ProfilePage from './pages/ProfilePage';
+import AlertSettingsPage from './pages/AlertSettingsPage';
 import InvestmentReadinessPage from './pages/InvestmentReadinessPage';
 import GoalsPage from './pages/GoalsPage';
 import SimulationsPage from './pages/SimulationsPage';
+import AdminSimulationPage from './pages/AdminSimulationPage';
 import { scheduleSessionExpiry } from './utils/session';
 
 function ProtectedRoute({ children }) {
@@ -71,6 +73,14 @@ export default function App() {
         }
       />
       <Route
+        path="/settings/alerts"
+        element={
+          <ProtectedRoute>
+            <AlertSettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/investment-readiness"
         element={
           <ProtectedRoute>
@@ -91,6 +101,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <SimulationsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/sim"
+        element={
+          <ProtectedRoute>
+            <AdminSimulationPage />
           </ProtectedRoute>
         }
       />

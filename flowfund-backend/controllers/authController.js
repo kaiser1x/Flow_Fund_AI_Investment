@@ -2,6 +2,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const pool = require('../config/db');
+const {
+  ensureCustomerFlowfundSeed,
+  isCustomerFlowfundEmail,
+} = require('../services/customerFlowfundDemo');
 
 // REGISTER
 exports.register = async (req, res) => {
@@ -62,6 +66,12 @@ exports.login = async (req, res) => {
       'INSERT INTO user_sessions (session_id, user_id, jwt_token, ip_address, user_agent, expires_at) VALUES (?, ?, ?, ?, ?, ?)',
       [sessionId, user.user_id, token, req.ip || null, userAgent, expiresAtUTC]
     );
+
+    try {
+      await ensureCustomerFlowfundSeed(user.user_id, user.email);
+    } catch (e) {
+      console.error('[LOGIN_DEMO_SEED]', e.message);
+    }
 
     res.json({ message: 'Login successful', token, role: user.role_name });
   } catch (err) {
@@ -165,7 +175,14 @@ exports.getProfile = async (req, res) => {
       [req.user.user_id]
     );
     if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
-    res.json(rows[0]);
+    const profile = rows[0];
+    try {
+      await ensureCustomerFlowfundSeed(req.user.user_id, profile.email);
+    } catch (e) {
+      console.error('[PROFILE_DEMO_SEED]', e.message);
+    }
+    profile.is_customer_flowfund_demo = isCustomerFlowfundEmail(profile.email);
+    res.json(profile);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -2,18 +2,18 @@ import axios from 'axios';
 
 const apiUrl = import.meta.env.VITE_API_URL;
 
-const api = axios.create({
-  baseURL: `${apiUrl || ''}/api/investment-readiness`,
+const alertsApi = axios.create({
+  baseURL: `${apiUrl || ''}/api/alerts`,
   headers: { 'Content-Type': 'application/json' },
 });
 
-api.interceptors.request.use((config) => {
+alertsApi.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-api.interceptors.response.use(
+alertsApi.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
@@ -24,6 +24,6 @@ api.interceptors.response.use(
   }
 );
 
-export const getInvestmentReadiness = () => api.get('/');
-
-export const getStockIdeas = () => api.get('/stock-ideas');
+export const getAlertPreferences = () => alertsApi.get('/preferences');
+export const updateAlertPreferences = (body) => alertsApi.put('/preferences', body);
+export const getAnomalyEvents = (limit = 40) => alertsApi.get('/anomalies', { params: { limit } });

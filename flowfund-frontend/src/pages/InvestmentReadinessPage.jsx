@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell } from 'recharts';
-import { getInvestmentReadiness } from '../api/investmentReadiness';
+import { getInvestmentReadiness, getStockIdeas } from '../api/investmentReadiness';
 import { getProfile, logout as logoutApi } from '../api/auth';
 import AppHeader from '../components/AppHeader';
 import { C } from '../theme/flowfundTheme';
@@ -63,6 +63,148 @@ function ScoreRing({ score, band, size = 180 }) {
   );
 }
 
+// ── Stock ideas (Alpha Vantage movers) ────────────────────────────────────────
+function fmtVol(n) {
+  if (n == null || Number.isNaN(n)) return '—';
+  if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
+  return String(n);
+}
+
+function StockIdeasSection({ data, loading, band }) {
+  const navigate = useNavigate();
+  const accent = BAND_COLOR[band] || C.brand;
+  if (loading) {
+    return (
+      <div style={{
+        background: C.surface, borderRadius: C.r,
+        border: `1px solid ${C.border}`, boxShadow: C.shadowSm,
+        padding: '20px 24px', marginBottom: '20px',
+      }}>
+        <div style={{ height: 14, width: '55%', borderRadius: 6, marginBottom: 14, background: 'linear-gradient(90deg, #e8ede9 0%, #d4ddd8 50%, #e8ede9 100%)', backgroundSize: '400px 100%', animation: 'ff-shimmer 1.4s ease infinite' }} />
+        {[1, 2, 3].map((i) => (
+          <div key={i} style={{ height: 48, borderRadius: 8, marginBottom: 8, background: 'linear-gradient(90deg, #e8ede9 0%, #d4ddd8 50%, #e8ede9 100%)', backgroundSize: '400px 100%', animation: 'ff-shimmer 1.4s ease infinite' }} />
+        ))}
+      </div>
+    );
+  }
+  if (!data?.stocks?.length) return null;
+
+  return (
+    <div style={{
+      background: C.surface, borderRadius: C.r,
+      border: `1px solid ${C.border}`, boxShadow: C.shadowSm,
+      overflow: 'hidden', marginBottom: '20px',
+    }}>
+      <div style={{
+        padding: '18px 24px', borderBottom: `1px solid ${C.border}`,
+        display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px',
+      }}>
+        <div>
+          <div style={{ fontSize: '16px', fontWeight: 700, color: C.ink }}>Ideas to research</div>
+          <div style={{ fontSize: '12px', color: C.muted, marginTop: '4px', lineHeight: 1.5 }}>
+            Top 3 liquid US names from Alpha Vantage <strong>most actively traded</strong> (plus fallbacks).
+            {data.last_updated && (
+              <span style={{ display: 'block', marginTop: 4, fontSize: '11px', color: C.faint }}>
+                Market snapshot: {data.last_updated}
+              </span>
+            )}
+          </div>
+        </div>
+        <span style={{
+          fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+          padding: '4px 10px', borderRadius: 20,
+          background: data.source === 'alphavantage' ? 'rgba(22,163,74,0.09)' : 'rgba(100,116,139,0.12)',
+          color: data.source === 'alphavantage' ? '#15803d' : C.muted,
+          border: `1px solid ${data.source === 'alphavantage' ? 'rgba(22,163,74,0.25)' : C.border}`,
+        }}>
+          {data.source === 'alphavantage' ? 'Live movers' : 'Examples'}
+        </span>
+      </div>
+
+      {data.notice && (
+        <div style={{
+          margin: '0 24px', marginTop: 14, padding: '10px 12px', borderRadius: C.rs,
+          background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.22)',
+          fontSize: '12px', color: '#b45309', lineHeight: 1.5,
+        }}>
+          {data.notice}
+        </div>
+      )}
+
+      <div style={{ padding: '12px 24px 20px' }}>
+        {data.stocks.map((s, idx) => {
+          const pct = s.changePercent != null && s.changePercent !== '' ? parseFloat(String(s.changePercent).replace(/,/g, '')) : null;
+          const pctColor = pct == null || Number.isNaN(pct) ? C.muted : pct >= 0 ? '#16a34a' : '#dc2626';
+          const pctStr = pct != null && !Number.isNaN(pct) ? `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%` : '—';
+          return (
+            <div
+              key={s.symbol || idx}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '14px',
+                padding: '14px 0', borderBottom: idx < data.stocks.length - 1 ? `1px solid ${C.border}` : 'none',
+              }}
+            >
+              <div style={{
+                width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                background: `${accent}18`, border: `1px solid ${accent}35`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '13px', fontWeight: 800, color: accent,
+              }}>
+                {idx + 1}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '15px', fontWeight: 700, color: C.ink, fontVariantNumeric: 'tabular-nums' }}>
+                  {s.symbol}
+                </div>
+                {s.name && (
+                  <div style={{ fontSize: '12px', color: C.muted, marginTop: 2, lineHeight: 1.4 }}>{s.name}</div>
+                )}
+                {s.tag && (
+                  <div style={{ fontSize: '10px', color: C.faint, marginTop: 4, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {s.tag}
+                  </div>
+                )}
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: C.ink, fontVariantNumeric: 'tabular-nums' }}>
+                  {s.price != null ? `$${Number(s.price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                </div>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: pctColor, marginTop: 2 }}>
+                  {pctStr}
+                </div>
+                <div style={{ fontSize: '10px', color: C.faint, marginTop: 2 }}>
+                  Vol {fmtVol(s.volume)}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{
+        padding: '12px 24px 16px', borderTop: `1px solid ${C.border}`,
+        background: '#fafcfb',
+      }}>
+        <p style={{ margin: 0, fontSize: '11px', color: C.muted, lineHeight: 1.55 }}>
+          {data.disclaimer}
+        </p>
+        <button
+          type="button"
+          onClick={() => navigate('/market')}
+          style={{
+            marginTop: 10, padding: 0, border: 'none', background: 'none',
+            fontSize: '12px', fontWeight: 600, color: C.brand, cursor: 'pointer',
+          }}
+        >
+          Open market lookup →
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Factor row ────────────────────────────────────────────────────────────────
 function FactorRow({ factor }) {
   const positive = factor.contribution.startsWith('+0') ? false : true;
@@ -112,17 +254,27 @@ export default function InvestmentReadinessPage() {
   const [data,    setData]    = useState(null);
   const [loading, setLoading] = useState(true);
   const [isDemo,  setIsDemo]  = useState(false);
+  const [stockIdeas, setStockIdeas] = useState(null);
+  const [ideasLoading, setIdeasLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
+    setIdeasLoading(true);
     Promise.all([
-      getProfile().then(r => setProfile(r.data)).catch(() => {}),
+      getProfile().then((r) => setProfile(r.data)).catch(() => {}),
       getInvestmentReadiness()
-        .then(r => {
+        .then((r) => {
           setData(r.data);
           setIsDemo(r.data.source === 'demo');
         })
         .catch(() => setData(null)),
-    ]).finally(() => setLoading(false));
+      getStockIdeas()
+        .then((r) => setStockIdeas(r.data))
+        .catch(() => setStockIdeas(null)),
+    ]).finally(() => {
+      setLoading(false);
+      setIdeasLoading(false);
+    });
   }, []);
 
   const handleLogout = async () => {
@@ -133,10 +285,16 @@ export default function InvestmentReadinessPage() {
 
   const band  = data?.color_band || 'red';
   const color = BAND_COLOR[band] || C.muted;
+  const noScoreData = data && (data.source === 'none' || data.score == null);
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
-      <AppHeader profile={profile} onLogout={handleLogout} liveData={!isDemo} isDemo={isDemo} />
+      <AppHeader
+        profile={profile}
+        onLogout={handleLogout}
+        liveData={data?.source === 'db'}
+        isDemo={isDemo}
+      />
 
       <div style={{ maxWidth: '760px', margin: '0 auto', padding: '40px 24px 64px' }}>
 
@@ -181,6 +339,19 @@ export default function InvestmentReadinessPage() {
             <div style={{ fontSize: '16px', fontWeight: 600, color: C.ink, marginTop: '12px' }}>Score Unavailable</div>
             <div style={{ fontSize: '13px', color: C.muted, marginTop: '6px' }}>
               Connect a bank account and import transactions to generate your score.
+            </div>
+          </div>
+        ) : noScoreData ? (
+          <div style={{
+            background: C.surface, borderRadius: C.r, border: `1px solid ${C.border}`,
+            padding: '48px 32px', textAlign: 'center',
+          }}>
+            <div style={{ fontSize: '44px' }}>🏦</div>
+            <div style={{ fontSize: '17px', fontWeight: 700, color: C.ink, marginTop: '14px' }}>
+              No accounts connected
+            </div>
+            <div style={{ fontSize: '14px', color: C.muted, marginTop: '8px', lineHeight: 1.6, maxWidth: '400px', margin: '8px auto 0' }}>
+              {data.message || 'Connect your bank on the dashboard and sync transactions to generate your investment readiness score.'}
             </div>
           </div>
         ) : (
@@ -242,6 +413,8 @@ export default function InvestmentReadinessPage() {
                 ))}
               </div>
             </div>
+
+            <StockIdeasSection data={stockIdeas} loading={ideasLoading} band={band} />
 
             {/* ── Recommendation ───────────────────────────────────────────── */}
             <div style={{

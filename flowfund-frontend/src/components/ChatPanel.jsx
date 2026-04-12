@@ -20,12 +20,10 @@ const PROMPTS = [
   'How can I improve my savings rate?',
 ];
 
-export default function ChatPanel({ hasLinkedAccounts, isDemo }) {
-  const greeting = isDemo
-    ? "Hi! I'm using demo data to show you example insights. Connect a real bank account for personalized analysis based on your actual spending."
-    : hasLinkedAccounts
-      ? "Hi! I can see your linked account data. Ask me anything about your spending patterns, savings habits, or financial health."
-      : "Hi! I'm your FlowFund AI financial education assistant. Connect a bank account to unlock personalized insights.";
+export default function ChatPanel({ hasLinkedAccounts }) {
+  const greeting = hasLinkedAccounts
+    ? "Hi! I can see your linked account data. Ask me anything about your spending patterns, savings habits, or financial health."
+    : "Hi! I'm your FlowFund AI assistant. Connect a bank account on the dashboard and sync — then I can answer using your real transaction data.";
 
   const [messages, setMessages] = useState([{ role: 'bot', text: greeting }]);
   const [input, setInput] = useState('');
@@ -88,15 +86,6 @@ export default function ChatPanel({ hasLinkedAccounts, isDemo }) {
           </div>
           <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)' }}>Educational Assistant</div>
         </div>
-        {isDemo && (
-          <span style={{
-            fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em',
-            background: 'rgba(255,200,0,0.18)', border: '1px solid rgba(255,200,0,0.38)',
-            color: '#fde68a', padding: '2px 8px', borderRadius: '20px',
-          }}>
-            DEMO
-          </span>
-        )}
         <div style={{
           width: 8, height: 8, borderRadius: '50%',
           background: C.accent,

@@ -81,45 +81,24 @@ function insertResult(id) { return { insertId: id }; }
 (async () => {
   console.log('\n[goals] regression tests\n');
 
-  // ── GROUP 1: GET /api/goals — demo fallback ─────────────────────────────────
-  console.log('Group 1 — Demo fallback (no DB rows)');
+  // ── GROUP 1: GET /api/goals — empty when no rows ─────────────────────────────
+  console.log('Group 1 — Empty list (no DB rows)');
 
-  await test('No goals in DB → returns demo, source=demo', async () => {
+  await test('No goals in DB → returns empty array, source=empty', async () => {
     const { getGoals } = loadController(makeMockPool([noRows()]));
     const { req, res, captured } = mockReqRes({ query: { filter: 'all' } });
     await getGoals(req, res);
-    assert.strictEqual(captured.data.source, 'demo');
+    assert.strictEqual(captured.data.source, 'empty');
     assert.ok(Array.isArray(captured.data.goals), 'goals must be array');
-    assert.ok(captured.data.goals.length > 0, 'demo must have goals');
+    assert.strictEqual(captured.data.goals.length, 0);
   });
 
-  await test('Demo has one goal of each type', async () => {
-    const { getGoals } = loadController(makeMockPool([noRows()]));
-    const { req, res, captured } = mockReqRes({ query: { filter: 'all' } });
-    await getGoals(req, res);
-    const types = captured.data.goals.map(g => g.type);
-    assert.ok(types.includes('savings'),           'missing savings');
-    assert.ok(types.includes('debt_payoff'),       'missing debt_payoff');
-    assert.ok(types.includes('spending_limit'),    'missing spending_limit');
-    assert.ok(types.includes('investment_target'), 'missing investment_target');
-  });
-
-  await test('Each demo goal has progress_pct and status_label', async () => {
-    const { getGoals } = loadController(makeMockPool([noRows()]));
-    const { req, res, captured } = mockReqRes({ query: { filter: 'all' } });
-    await getGoals(req, res);
-    for (const g of captured.data.goals) {
-      assert.ok('progress_pct'  in g, `goal missing progress_pct: ${g.name}`);
-      assert.ok('status_label'  in g, `goal missing status_label: ${g.name}`);
-      assert.ok('status_color'  in g, `goal missing status_color: ${g.name}`);
-    }
-  });
-
-  await test('DB error → graceful demo fallback, never throws', async () => {
+  await test('DB error → graceful empty response, never throws', async () => {
     const { getGoals } = loadController(makeMockPool([new Error('DB down')]));
     const { req, res, captured } = mockReqRes({ query: { filter: 'all' } });
     await getGoals(req, res);
-    assert.strictEqual(captured.data.source, 'demo');
+    assert.strictEqual(captured.data.source, 'empty');
+    assert.strictEqual(captured.data.goals.length, 0);
   });
 
   // ── GROUP 2: Progress computation ───────────────────────────────────────────
@@ -297,11 +276,11 @@ function insertResult(id) { return { insertId: id }; }
     assert.ok(typeof captured.data.summary === 'string' && captured.data.summary.length > 0, 'summary must be non-empty string');
   });
 
-  await test('Insights DB error → graceful fallback with source=demo', async () => {
+  await test('Insights DB error → graceful fallback with source=none', async () => {
     const { getGoalsInsights } = loadController(makeMockPool([new Error('DB down')]));
     const { req, res, captured } = mockReqRes();
     await getGoalsInsights(req, res);
-    assert.strictEqual(captured.data.source, 'demo');
+    assert.strictEqual(captured.data.source, 'none');
     assert.ok(captured.data.summary, 'fallback must include summary');
   });
 

@@ -1,6 +1,7 @@
 'use strict';
 
 const pool = require('../config/db');
+const alphaVantageService = require('../services/alphaVantageService');
 
 // ── Threshold helpers (spec-defined) ─────────────────────────────────────────
 function colorBand(score) {
@@ -81,35 +82,18 @@ function buildFactors(m) {
   ];
 }
 
-// ── Demo computation (runs real scoring logic against demo data) ──────────────
-function buildDemoResult() {
-  // Demo data from getDemoTransactions() / buildDemoSnapshot()
-  const monthly_income      = 1200.00;
-  const monthly_expenses    = 508.55;
-  const balance             = 1247.82;
-  const savings_rate        = ((monthly_income - monthly_expenses) / monthly_income) * 100; // 57.6
-  const cash_buffer_months  = balance / monthly_expenses;  // ~2.45
-  const volatility_score    = 0;  // single period → no std dev
-
-  let score = 0;
-  if (monthly_income   >   0) score += 20;
-  if (savings_rate     >=  20) score += 30;
-  if (cash_buffer_months >= 3) score += 30;
-  if (volatility_score <=  100) score += 20;
-
-  console.log(`[INVEST_DEMO] computed score=${score} savings_rate=${savings_rate.toFixed(1)} buffer=${cash_buffer_months.toFixed(2)}`);
-
-  const metrics = { monthly_income, monthly_expenses, savings_rate, volatility_score, cash_buffer_months, score };
-
+function buildNoDataResult() {
   return {
-    score,
-    risk_level: riskLabel(score),
-    color_band: colorBand(score),
-    verdict: verdict(score),
-    factors: buildFactors(metrics),
-    recommendation: recommendation(score),
-    computed_at: new Date().toISOString(),
-    source: 'demo',
+    score: null,
+    risk_level: null,
+    color_band: null,
+    verdict: null,
+    factors: [],
+    recommendation:
+      'Connect your bank on the dashboard and sync transactions to generate your investment readiness score.',
+    computed_at: null,
+    source: 'none',
+    message: 'No accounts connected. Connect your bank to start.',
   };
 }
 
@@ -142,9 +126,8 @@ exports.getReadiness = async (req, res) => {
     const hasMetrics = metricRows.length > 0;
 
     if (!hasScore || !hasMetrics) {
-      // No Plaid data imported yet → fall back to demo
-      console.log(`[INVEST_GET] no db data → demo (hasScore=${hasScore} hasMetrics=${hasMetrics})`);
-      return res.json(buildDemoResult());
+      console.log(`[INVEST_GET] no db data → none (hasScore=${hasScore} hasMetrics=${hasMetrics})`);
+      return res.json(buildNoDataResult());
     }
 
     const score = parseInt(scoreRows[0].score_value, 10);
@@ -171,8 +154,27 @@ exports.getReadiness = async (req, res) => {
     });
   } catch (err) {
     console.error('[INVEST_GET_ERROR]', err.message);
-    // Graceful fallback — never crash the dashboard over this widget
-    console.log('[INVEST_GET] db error → demo fallback');
-    return res.json(buildDemoResult());
+    console.log('[INVEST_GET] db error → none fallback');
+    return res.json(buildNoDataResult());
+  }
+};
+
+const STOCK_IDEAS_DISCLAIMER =
+  'Educational only — not financial advice. Prices and movers change quickly; verify any trade with your own research and risk tolerance.';
+
+/** GET /api/investment-readiness/stock-ideas — top 3 names from Alpha Vantage movers (cached) or static ETFs. */
+exports.getStockIdeas = async (req, res) => {
+  try {
+    const result = await alphaVantageService.getSuggestedStocksForReadiness(3);
+    res.json({
+      stocks: result.stocks,
+      source: result.source,
+      last_updated: result.last_updated,
+      notice: result.notice,
+      disclaimer: STOCK_IDEAS_DISCLAIMER,
+    });
+  } catch (err) {
+    console.error('[INVEST_STOCK_IDEAS]', err.message);
+    res.status(500).json({ error: 'Failed to load stock ideas' });
   }
 };

@@ -22,6 +22,12 @@ const SERIES_CACHE_MS = Math.max(
 const SEARCH_HIT_CACHE_MS = 30 * 60 * 1000;
 const SEARCH_MISS_CACHE_MS = 90 * 1000;
 
+/** TOP_GAINERS_LOSERS changes intraday; cache to protect free-tier quota. */
+const TOP_MOVERS_CACHE_MS = Math.max(
+  15 * 60 * 1000,
+  parseInt(process.env.ALPHA_VANTAGE_TOP_MOVERS_CACHE_MS || String(45 * 60 * 1000), 10) || 45 * 60 * 1000
+);
+
 function getApiKey() {
   return (process.env.ALPHA_VANTAGE_API_KEY || process.env.ALPHAVANTAGE_API_KEY || '').trim();
 }
@@ -284,6 +290,170 @@ async function fetchDailySeries(symbol, opts = {}) {
   };
 }
 
+/**
+ * Alpha Vantage TOP_GAINERS_LOSERS — top gainers, losers, most actively traded (US).
+ * @returns {Promise<{ error: string|null, last_updated?: string, most_actively_traded?: object[], top_gainers?: object[], top_losers?: object[], rawNote?: string }>}
+ */
+async function topGainersLosers() {
+  const cacheKey = 'top_gainers_losers:v1';
+  const cached = cacheGet(cacheKey, TOP_MOVERS_CACHE_MS);
+  if (cached && !cached.error) return cached;
+
+  const { error, body } = await fetchAv({ function: 'TOP_GAINERS_LOSERS' });
+
+  if (error || !body?.most_actively_traded) {
+    return {
+      error: error || 'no_movers',
+      most_actively_traded: [],
+      rawNote: body?.Note || body?.Information,
+    };
+  }
+
+  const out = {
+    error: null,
+    last_updated: body.last_updated || null,
+    metadata: body.metadata || null,
+    most_actively_traded: body.most_actively_traded,
+    top_gainers: body.top_gainers || [],
+    top_losers: body.top_losers || [],
+  };
+  cacheSet(cacheKey, out);
+  return out;
+}
+
+const KNOWN_COMPANY_NAMES = {
+  NVDA: 'NVIDIA Corporation',
+  AAPL: 'Apple Inc.',
+  MSFT: 'Microsoft Corporation',
+  AMZN: 'Amazon.com Inc.',
+  GOOGL: 'Alphabet Inc.',
+  META: 'Meta Platforms Inc.',
+  TSLA: 'Tesla Inc.',
+  AVGO: 'Broadcom Inc.',
+  INTC: 'Intel Corporation',
+  PLTR: 'Palantir Technologies Inc.',
+  AMD: 'Advanced Micro Devices',
+  SPY: 'SPDR S&P 500 ETF Trust',
+  VTI: 'Vanguard Total Stock Market ETF',
+  VOO: 'Vanguard S&P 500 ETF',
+  QQQ: 'Invesco QQQ Trust',
+  IWM: 'iShares Russell 2000 ETF',
+  BITO: 'ProShares Bitcoin ETF',
+  NOK: 'Nokia Corporation',
+  SOXL: 'Direxion Daily Semiconductor Bull 3X Shares',
+  SOXS: 'Direxion Daily Semiconductor Bear 3X Shares',
+};
+
+/**
+ * Pick liquid-looking US symbols from movers (skip obvious warrants/pennies where possible).
+ */
+function pickSuggestedStocksFromMovers(moversPayload, limit = 3) {
+  const active = moversPayload.most_actively_traded || [];
+  const plainTicker = (t) => typeof t === 'string' && /^[A-Z]{1,5}$/.test(t);
+  const notWarrant = (t) => t && !/[W+^]/.test(t);
+  const priceNum = (p) => parseFloat(p) || 0;
+
+  const tier1 = active.filter(
+    (x) =>
+      plainTicker(x.ticker) &&
+      notWarrant(x.ticker) &&
+      priceNum(x.price) >= 8
+  );
+  const tier2 = active.filter(
+    (x) => plainTicker(x.ticker) && notWarrant(x.ticker) && priceNum(x.price) >= 3
+  );
+  const pool = tier1.length >= limit ? tier1 : tier2.length >= limit ? tier2 : active;
+
+  const seen = new Set();
+  const rows = [];
+  for (const x of pool) {
+    if (rows.length >= limit) break;
+    const sym = x.ticker;
+    if (!sym || seen.has(sym)) continue;
+    seen.add(sym);
+    rows.push({
+      symbol: sym,
+      name: KNOWN_COMPANY_NAMES[sym] || null,
+      price: priceNum(x.price),
+      changePercent: String(x.change_percentage || '').replace(/%/g, '').trim(),
+      changeAmount: x.change_amount != null ? String(x.change_amount) : null,
+      volume: parseInt(x.volume, 10) || 0,
+      tag: 'High volume (US)',
+    });
+  }
+  return rows;
+}
+
+const STATIC_DIVERSIFIED_PICKS = [
+  {
+    symbol: 'SPY',
+    name: 'SPDR S&P 500 ETF Trust',
+    price: null,
+    changePercent: null,
+    changeAmount: null,
+    volume: null,
+    tag: 'Core US large-cap',
+  },
+  {
+    symbol: 'VTI',
+    name: 'Vanguard Total Stock Market ETF',
+    price: null,
+    changePercent: null,
+    changeAmount: null,
+    volume: null,
+    tag: 'Total US market',
+  },
+  {
+    symbol: 'VXUS',
+    name: 'Vanguard Total International Stock ETF',
+    price: null,
+    changePercent: null,
+    changeAmount: null,
+    volume: null,
+    tag: 'International diversification',
+  },
+];
+
+/**
+ * @param {number} limit
+ * @returns {Promise<{ stocks: object[], source: 'alphavantage'|'static', last_updated: string|null, notice?: string }>}
+ */
+async function getSuggestedStocksForReadiness(limit = 3) {
+  if (!getApiKey()) {
+    return {
+      stocks: STATIC_DIVERSIFIED_PICKS.slice(0, limit),
+      source: 'static',
+      last_updated: null,
+      notice: 'Set ALPHA_VANTAGE_API_KEY for live market movers from Alpha Vantage.',
+    };
+  }
+
+  const movers = await topGainersLosers();
+  if (movers.error) {
+    return {
+      stocks: STATIC_DIVERSIFIED_PICKS.slice(0, limit),
+      source: 'static',
+      last_updated: movers.last_updated || null,
+      notice:
+        movers.rawNote ||
+        'Live movers temporarily unavailable (rate limit or API). Showing diversified ETF examples.',
+    };
+  }
+
+  let stocks = pickSuggestedStocksFromMovers(movers, limit);
+  if (stocks.length < limit) {
+    const fill = STATIC_DIVERSIFIED_PICKS.filter((s) => !stocks.find((r) => r.symbol === s.symbol));
+    stocks = [...stocks, ...fill].slice(0, limit);
+  }
+
+  return {
+    stocks,
+    source: 'alphavantage',
+    last_updated: movers.last_updated || null,
+    notice: undefined,
+  };
+}
+
 module.exports = {
   getApiKey,
   resolveOutputSize,
@@ -291,4 +461,7 @@ module.exports = {
   timeSeriesDailyAdjusted,
   timeSeriesDaily,
   fetchDailySeries,
+  topGainersLosers,
+  pickSuggestedStocksFromMovers,
+  getSuggestedStocksForReadiness,
 };

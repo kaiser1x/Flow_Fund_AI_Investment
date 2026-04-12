@@ -1,5 +1,26 @@
 const pool = require('../config/db');
 
+let _financialMetricsColumnsWidened = false;
+let _financialMetricsWidenAttempted = false;
+
+/** Ensures volatility_score / cash_buffer columns fit real Plaid magnitudes (lazy migration). */
+async function ensureFinancialMetricsNumericWidth() {
+  if (_financialMetricsColumnsWidened || _financialMetricsWidenAttempted) return;
+  _financialMetricsWidenAttempted = true;
+  try {
+    await pool.query(
+      'ALTER TABLE financial_metrics MODIFY COLUMN volatility_score DECIMAL(15,4) NULL'
+    );
+    await pool.query(
+      'ALTER TABLE financial_metrics MODIFY COLUMN cash_buffer_months DECIMAL(15,4) NULL'
+    );
+    _financialMetricsColumnsWidened = true;
+    console.log('[METRICS] Widened financial_metrics volatility_score / cash_buffer_months');
+  } catch (err) {
+    console.warn('[METRICS] Could not auto-widen columns (run npm run db:schema):', err.message);
+  }
+}
+
 /**
  * Calculates derived financial metrics for a user from their imported
  * transaction and account data, then writes results to financial_metrics
@@ -9,6 +30,8 @@ const pool = require('../config/db');
  * features (dashboard, readiness score, alerts) always have fresh data.
  */
 async function calculate(user_id) {
+  await ensureFinancialMetricsNumericWidth();
+
   const now       = new Date();
   const thisYear  = now.getFullYear();
   const thisMonth = now.getMonth() + 1; // 1-based

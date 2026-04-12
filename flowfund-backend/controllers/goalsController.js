@@ -2,58 +2,6 @@
 
 const pool = require('../config/db');
 
-// ── Demo seed data ────────────────────────────────────────────────────────────
-function getDemoGoals() {
-  const today = new Date();
-  const fmt = d => d.toISOString().slice(0, 10);
-  return [
-    {
-      goal_id: 'demo-1',
-      name: 'Emergency Fund',
-      type: 'savings',
-      target_amount: 3000.00,
-      current_amount: 1247.82,
-      target_date: fmt(new Date(today.getFullYear(), today.getMonth() + 6, 1)),
-      notes: 'Build 3 months of expenses as a safety net.',
-      status: 'active',
-      auto_track: true,
-    },
-    {
-      goal_id: 'demo-2',
-      name: 'Pay Off Credit Card',
-      type: 'debt_payoff',
-      target_amount: 1500.00,
-      current_amount: 600.00,
-      target_date: fmt(new Date(today.getFullYear(), today.getMonth() + 4, 1)),
-      notes: 'Clear high-interest credit card balance.',
-      status: 'active',
-      auto_track: false,
-    },
-    {
-      goal_id: 'demo-3',
-      name: 'Monthly Spending Cap',
-      type: 'spending_limit',
-      target_amount: 600.00,
-      current_amount: 508.55,
-      target_date: fmt(new Date(today.getFullYear(), today.getMonth() + 1, 1)),
-      notes: 'Keep monthly spending under $600.',
-      status: 'active',
-      auto_track: true,
-    },
-    {
-      goal_id: 'demo-4',
-      name: 'First Investment Portfolio',
-      type: 'investment_target',
-      target_amount: 5000.00,
-      current_amount: 70.00,  // linked to investment readiness score proxy
-      target_date: fmt(new Date(today.getFullYear() + 1, today.getMonth(), 1)),
-      notes: 'Save enough to open a diversified index fund account.',
-      status: 'active',
-      auto_track: false,
-    },
-  ];
-}
-
 // ── Progress & status helpers ─────────────────────────────────────────────────
 function computeProgress(goal) {
   const pct = goal.target_amount > 0
@@ -211,8 +159,9 @@ async function computeInsights(user_id) {
     return {
       spending_trend: 'stable',
       balance_trend: 'stable',
-      summary: 'Your spending remained stable compared to last month. Keep monitoring your monthly expenses and savings rate to stay on track with your goals.',
-      source: 'demo',
+      summary:
+        'Connect a bank account and sync transactions to see spending and balance trends here.',
+      source: 'none',
     };
   }
 }
@@ -234,9 +183,8 @@ exports.getGoals = async (req, res) => {
     );
 
     if (rows.length === 0 && filter === 'all') {
-      console.log(`[GOALS_GET] no goals → demo`);
-      const demo = getDemoGoals().map(enrichGoal);
-      return res.json({ goals: demo, source: 'demo' });
+      console.log(`[GOALS_GET] no goals → empty`);
+      return res.json({ goals: [], source: 'empty' });
     }
 
     // Auto-track supported goal types
@@ -250,8 +198,7 @@ exports.getGoals = async (req, res) => {
 
   } catch (err) {
     console.error('[GOALS_GET_ERROR]', err.message);
-    const demo = getDemoGoals().map(enrichGoal);
-    res.json({ goals: demo, source: 'demo' });
+    res.json({ goals: [], source: 'empty' });
   }
 };
 
@@ -267,15 +214,13 @@ exports.getGoalsSummary = async (req, res) => {
     );
 
     if (rows.length === 0) {
-      const demo = getDemoGoals().filter(g => g.status === 'active').map(enrichGoal);
-      const top3  = demo.slice(0, 3);
       return res.json({
-        goals: top3,
-        total: demo.length,
-        on_track: demo.filter(g => g.status_label === 'On Track').length,
-        at_risk: demo.filter(g => g.status_label === 'At Risk').length,
+        goals: [],
+        total: 0,
+        on_track: 0,
+        at_risk: 0,
         completed: 0,
-        source: 'demo',
+        source: 'empty',
       });
     }
 
@@ -302,8 +247,7 @@ exports.getGoalsSummary = async (req, res) => {
 
   } catch (err) {
     console.error('[GOALS_SUMMARY_ERROR]', err.message);
-    const demo = getDemoGoals().map(enrichGoal).slice(0, 3);
-    res.json({ goals: demo, total: 4, on_track: 2, at_risk: 1, completed: 0, source: 'demo' });
+    res.json({ goals: [], total: 0, on_track: 0, at_risk: 0, completed: 0, source: 'empty' });
   }
 };
 

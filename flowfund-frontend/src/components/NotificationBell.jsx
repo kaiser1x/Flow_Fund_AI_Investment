@@ -42,43 +42,7 @@ const TYPE_META = {
   system:            { icon: '🔔', color: '#1a4d3e' },
 };
 
-// ── Local demo fallback (used if API is unreachable and isDemo=true) ──────────
-const LOCAL_DEMO = [
-  {
-    notification_id: 'demo-1',
-    type: 'spending_alert',
-    title: 'Spending Alert',
-    message: 'Your Food & Drink spending is 28% higher than last month.',
-    is_read: false,
-    created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-  },
-  {
-    notification_id: 'demo-2',
-    type: 'large_transaction',
-    title: 'Large Transaction Detected',
-    message: 'A $89.00 charge at Textbooks Online was recorded.',
-    is_read: false,
-    created_at: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
-  },
-  {
-    notification_id: 'demo-3',
-    type: 'budget_warning',
-    title: 'Budget Warning',
-    message: 'You have used 85% of your estimated monthly budget.',
-    is_read: true,
-    created_at: new Date(Date.now() - 48 * 3600 * 1000).toISOString(),
-  },
-  {
-    notification_id: 'demo-4',
-    type: 'system',
-    title: 'Welcome to FlowFund AI!',
-    message: 'Connect a bank account to unlock personalized spending insights and alerts.',
-    is_read: true,
-    created_at: new Date(Date.now() - 72 * 3600 * 1000).toISOString(),
-  },
-];
-
-// ── Demo read-state persistence (survives page navigation) ───────────────────
+// ── Demo read-state persistence (legacy demo IDs in localStorage) ─────────────
 const DEMO_READ_KEY = 'ff_demo_notif_read';
 
 function getDemoReadIds() {
@@ -126,7 +90,7 @@ export default function NotificationBell({ isDemo = false }) {
         setNotifications(allDemo ? applyDemoReadState(notifs) : notifs);
       })
       .catch(() => {
-        if (isDemo) setNotifications(applyDemoReadState(LOCAL_DEMO));
+        setNotifications([]);
       })
       .finally(() => setLoading(false));
   }, [isDemo]);
@@ -146,7 +110,8 @@ export default function NotificationBell({ isDemo = false }) {
     };
   }, [open]);
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const unreadList = notifications.filter((n) => !n.is_read);
+  const unreadCount = unreadList.length;
   const isAllDemo   = notifications.every((n) => String(n.notification_id).startsWith('demo-'));
 
   const handleMarkRead = useCallback(async (id) => {
@@ -326,7 +291,7 @@ export default function NotificationBell({ isDemo = false }) {
                 />
               ))
             ) : notifications.length === 0 ? (
-              // Empty state
+              // Empty state — nothing from server
               <div
                 style={{
                   padding: '36px 20px',
@@ -345,27 +310,47 @@ export default function NotificationBell({ isDemo = false }) {
                   No notifications yet.
                 </div>
               </div>
+            ) : unreadList.length === 0 ? (
+              // Had notifications but none unread (e.g. after mark all as read)
+              <div
+                style={{
+                  padding: '36px 20px',
+                  textAlign: 'center',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <div style={{ fontSize: '32px' }}>✓</div>
+                <div style={{ fontSize: '14px', fontWeight: 600, color: C.ink }}>
+                  All caught up!
+                </div>
+                <div style={{ fontSize: '12px', color: C.muted }}>
+                  No unread notifications.
+                </div>
+              </div>
             ) : (
-              notifications.map((n) => {
+              unreadList.map((n) => {
                 const meta = TYPE_META[n.type] || TYPE_META.system;
                 return (
                   <div
                     key={n.notification_id}
-                    onClick={() => !n.is_read && handleMarkRead(n.notification_id)}
+                    onClick={() => handleMarkRead(n.notification_id)}
                     style={{
                       display: 'flex',
                       gap: '10px',
                       padding: '12px 14px',
                       borderBottom: `1px solid ${C.border}`,
-                      background: n.is_read ? 'transparent' : 'rgba(46,204,138,0.05)',
-                      cursor: n.is_read ? 'default' : 'pointer',
+                      background: 'rgba(46,204,138,0.05)',
+                      cursor: 'pointer',
                       transition: 'background 0.15s',
                     }}
                     onMouseEnter={(e) => {
-                      if (!n.is_read) e.currentTarget.style.background = 'rgba(46,204,138,0.1)';
+                      e.currentTarget.style.background = 'rgba(46,204,138,0.1)';
                     }}
                     onMouseLeave={(e) => {
-                      if (!n.is_read) e.currentTarget.style.background = 'rgba(46,204,138,0.05)';
+                      e.currentTarget.style.background = 'rgba(46,204,138,0.05)';
                     }}
                   >
                     {/* Type icon */}
@@ -399,7 +384,7 @@ export default function NotificationBell({ isDemo = false }) {
                         <span
                           style={{
                             fontSize: '13px',
-                            fontWeight: n.is_read ? 500 : 700,
+                            fontWeight: 700,
                             color: C.ink,
                             lineHeight: 1.3,
                           }}
@@ -428,19 +413,16 @@ export default function NotificationBell({ isDemo = false }) {
                       </div>
                     </div>
 
-                    {/* Unread dot */}
-                    {!n.is_read && (
-                      <div
-                        style={{
-                          width: 7,
-                          height: 7,
-                          borderRadius: '50%',
-                          background: C.accent,
-                          flexShrink: 0,
-                          marginTop: '5px',
-                        }}
-                      />
-                    )}
+                    <div
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: '50%',
+                        background: C.accent,
+                        flexShrink: 0,
+                        marginTop: '5px',
+                      }}
+                    />
                   </div>
                 );
               })

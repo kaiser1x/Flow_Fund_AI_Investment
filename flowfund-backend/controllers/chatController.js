@@ -1,5 +1,5 @@
 const getGeminiClient = require('../config/gemini');
-const { buildSnapshot, buildDemoSnapshot } = require('../services/snapshotService');
+const { buildSnapshot } = require('../services/snapshotService');
 
 const GEMINI_MODEL = 'gemini-2.5-flash';
 
@@ -82,20 +82,31 @@ exports.sendMessage = async (req, res) => {
     return res.status(400).json({ error: 'message is required' });
   }
 
-  // ── Snapshot (fall back to demo if no real data) ──────────────────────────
+  const NO_DATA_REPLY =
+    'I do not have your transaction data yet. On the dashboard, connect a bank account and run a sync. Once your transactions load, you can ask me about spending, savings, and patterns — I only use numbers from your linked data.';
+
   let snapshot;
   let isDemo = false;
   try {
     snapshot = await buildSnapshot(uid);
-    if (!snapshot.hasData) {
-      snapshot = buildDemoSnapshot();
-      isDemo = true;
-    }
-    console.log(`[SNAPSHOT_OK] hasData=${snapshot.hasData} isDemo=${isDemo}`);
+    console.log(`[SNAPSHOT_OK] hasData=${snapshot.hasData}`);
   } catch (err) {
     console.error('[SNAPSHOT_FETCH_FAILED]', err.message);
-    snapshot = buildDemoSnapshot();
-    isDemo = true;
+    return res.json({
+      reply:
+        'I could not load your financial data right now. Please try again in a moment, or reconnect your bank from the dashboard.',
+      hasFinancialData: false,
+      isDemo: false,
+    });
+  }
+
+  if (!snapshot.hasData) {
+    return res.json({
+      reply: NO_DATA_REPLY,
+      hasFinancialData: false,
+      isDemo: false,
+      reason: snapshot.reason,
+    });
   }
 
   // ── Gemini ────────────────────────────────────────────────────────────────

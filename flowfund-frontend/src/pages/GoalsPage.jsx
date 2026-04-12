@@ -426,12 +426,6 @@ function GrowthInsightsPanel() {
         <p style={{ margin: 0, fontSize: 13, color: C.ink, lineHeight: 1.7 }}>
           {insights.summary}
         </p>
-
-        {insights.source === 'demo' && (
-          <div style={{ marginTop: 10, fontSize: 11, color: C.faint }}>
-            Connect a bank account to see your real financial trends.
-          </div>
-        )}
       </div>
     </div>
   );

@@ -38,5 +38,11 @@ export const createLinkToken = () => plaidApi.post('/create-link-token');
 export const exchangePublicToken = (public_token) =>
   plaidApi.post('/exchange-public-token', { public_token });
 export const getAccounts = () => plaidApi.get('/accounts');
+/** Runs /transactions/sync for all linked items, then metrics + readiness. */
+export const syncPlaidFromBank = () => plaidApi.post('/sync');
+/** Sandbox / optional prod: /transactions/refresh then sync (simulates new activity). */
+export const sandboxRefreshPlaidTransactions = () => plaidApi.post('/transactions-refresh');
+/** Clears Plaid items + linked accounts + their transactions (use after encryption key change). */
+export const disconnectPlaidLink = () => plaidApi.delete('/link');
 
 export default plaidApi;

@@ -56,19 +56,21 @@ function ScoreRing({ score, band, size = 120 }) {
 }
 
 // ── Widget ────────────────────────────────────────────────────────────────────
-export default function InvestmentReadinessWidget() {
+export default function InvestmentReadinessWidget({ refreshToken = 0 }) {
   const navigate = useNavigate();
   const [data,    setData]    = useState(null);
   const [loading, setLoading] = useState(true);
   const [hovered, setHovered] = useState(false);
 
   useEffect(() => {
+    setLoading(true);
     getInvestmentReadiness()
       .then(({ data: d }) => setData(d))
       .catch(() => setData(null))
       .finally(() => setLoading(false));
-  }, []);
+  }, [refreshToken]);
 
+  const noData = data?.source === 'none' || data?.score == null;
   const band  = data?.color_band || 'red';
   const color = BAND_COLOR[band] || C.muted;
 
@@ -114,12 +116,22 @@ export default function InvestmentReadinessWidget() {
           <div style={{ fontSize: '28px' }}>📊</div>
           <div style={{ fontSize: '12px', color: C.muted, marginTop: '6px' }}>Score unavailable</div>
         </div>
+      ) : noData ? (
+        <div style={{ textAlign: 'center', padding: '12px 8px' }}>
+          <div style={{ fontSize: '26px' }}>🏦</div>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: C.ink, marginTop: '8px', lineHeight: 1.35 }}>
+            No accounts connected
+          </div>
+          <div style={{ fontSize: '11px', color: C.muted, marginTop: '4px', lineHeight: 1.4 }}>
+            Connect your bank to start
+          </div>
+        </div>
       ) : (
         <ScoreRing score={data.score} band={band} size={120} />
       )}
 
       {/* Verdict label */}
-      {!loading && data && (
+      {!loading && data && !noData && (
         <div style={{
           fontSize: '13px', fontWeight: 700, color,
           textAlign: 'center', lineHeight: 1.3,
@@ -129,7 +141,7 @@ export default function InvestmentReadinessWidget() {
       )}
 
       {/* Tooltip overlay on hover */}
-      {hovered && data && (
+      {hovered && data && !noData && (
         <div style={{
           position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%',
           transform: 'translateX(-50%)',

@@ -195,9 +195,20 @@ export default function ProfilePage() {
         </button>
 
         {/* Page title */}
-        <h1 style={{ fontSize: '26px', fontWeight: 800, color: C.ink, margin: '0 0 24px', letterSpacing: '-0.025em' }}>
+        <h1 style={{ fontSize: '26px', fontWeight: 800, color: C.ink, margin: '0 0 12px', letterSpacing: '-0.025em' }}>
           My Profile
         </h1>
+        <button
+          type="button"
+          onClick={() => navigate('/settings/alerts')}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            marginBottom: '24px', padding: 0, background: 'none', border: 'none',
+            fontSize: '13px', fontWeight: 600, color: C.brand, cursor: 'pointer',
+          }}
+        >
+          Alerts & notification settings →
+        </button>
 
         {loading ? (
           // Shimmer skeleton

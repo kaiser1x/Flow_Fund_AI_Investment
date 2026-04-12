@@ -2,45 +2,6 @@
 
 const pool = require('../config/db');
 
-// ── Demo seed (returned when user has no real notifications) ──────────────────
-function getDemoNotifications() {
-  const ago = (ms) => new Date(Date.now() - ms).toISOString();
-  return [
-    {
-      notification_id: 'demo-1',
-      type: 'spending_alert',
-      title: 'Spending Alert',
-      message: 'Your Food & Drink spending is 28% higher than last month.',
-      is_read: false,
-      created_at: ago(2 * 3600 * 1000),   // 2 hours ago
-    },
-    {
-      notification_id: 'demo-2',
-      type: 'large_transaction',
-      title: 'Large Transaction Detected',
-      message: 'A $89.00 charge at Textbooks Online was recorded.',
-      is_read: false,
-      created_at: ago(24 * 3600 * 1000),  // 1 day ago
-    },
-    {
-      notification_id: 'demo-3',
-      type: 'budget_warning',
-      title: 'Budget Warning',
-      message: 'You have used 85% of your estimated monthly budget.',
-      is_read: true,
-      created_at: ago(48 * 3600 * 1000),  // 2 days ago
-    },
-    {
-      notification_id: 'demo-4',
-      type: 'system',
-      title: 'Welcome to FlowFund AI!',
-      message: 'Connect a bank account to unlock personalized spending insights and alerts.',
-      is_read: true,
-      created_at: ago(72 * 3600 * 1000),  // 3 days ago
-    },
-  ];
-}
-
 // GET /api/notifications
 exports.getNotifications = async (req, res) => {
   const uid = req.user?.user_id;
@@ -60,18 +21,14 @@ exports.getNotifications = async (req, res) => {
     console.log(`[NOTIF_GET] source=db count=${rows.length} unread=${unread}`);
 
     if (rows.length === 0) {
-      const demo = getDemoNotifications();
-      const demoUnread = demo.filter((n) => !n.is_read).length;
-      console.log(`[NOTIF_GET] source=demo count=${demo.length} unread=${demoUnread}`);
-      return res.json({ notifications: demo, isDemo: true });
+      console.log('[NOTIF_GET] no rows → empty list');
+      return res.json({ notifications: [], isDemo: false });
     }
 
     res.json({ notifications: rows, isDemo: false });
   } catch (err) {
     console.error('[NOTIF_GET_ERROR]', err.message);
-    // Graceful fallback — never crash the page over notifications
-    const demo = getDemoNotifications();
-    res.json({ notifications: demo, isDemo: true });
+    res.json({ notifications: [], isDemo: false });
   }
 };
 

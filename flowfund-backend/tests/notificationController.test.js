@@ -70,39 +70,21 @@ async function test(name, fn) {
     assert.strictEqual(captured.data.notifications.length, 2);
   });
 
-  await test('Returns demo notifications when DB has 0 rows', async () => {
+  await test('Returns empty notifications when DB has 0 rows', async () => {
     const { getNotifications } = loadController(makeMockPool([[]])); // empty result
     const { req, res, captured } = mockReqRes();
     await getNotifications(req, res);
-    assert.strictEqual(captured.data.isDemo, true);
-    assert.ok(captured.data.notifications.length > 0, 'demo notifications must be non-empty');
+    assert.strictEqual(captured.data.isDemo, false);
+    assert.strictEqual(captured.data.notifications.length, 0);
   });
 
-  await test('Demo notifications contain all 4 expected types', async () => {
-    const { getNotifications } = loadController(makeMockPool([[]]));
-    const { req, res, captured } = mockReqRes();
-    await getNotifications(req, res);
-    const types = captured.data.notifications.map((n) => n.type);
-    assert.ok(types.includes('spending_alert'),    'missing spending_alert');
-    assert.ok(types.includes('large_transaction'), 'missing large_transaction');
-    assert.ok(types.includes('budget_warning'),    'missing budget_warning');
-    assert.ok(types.includes('system'),            'missing system');
-  });
-
-  await test('Demo notifications have 2 unread entries', async () => {
-    const { getNotifications } = loadController(makeMockPool([[]]));
-    const { req, res, captured } = mockReqRes();
-    await getNotifications(req, res);
-    const unread = captured.data.notifications.filter((n) => !n.is_read).length;
-    assert.strictEqual(unread, 2, `Expected 2 unread demo notifications, got ${unread}`);
-  });
-
-  await test('Falls back to demo on DB error (never crashes)', async () => {
+  await test('DB error → empty list, isDemo false (never crashes)', async () => {
     const { getNotifications } = loadController(makeMockPool([new Error('DB down')]));
     const { req, res, captured } = mockReqRes();
     await getNotifications(req, res); // must not throw
-    assert.strictEqual(captured.data.isDemo, true);
+    assert.strictEqual(captured.data.isDemo, false);
     assert.ok(Array.isArray(captured.data.notifications));
+    assert.strictEqual(captured.data.notifications.length, 0);
   });
 
   await test('Notifications are user-scoped (user_id passed to query)', async () => {
@@ -168,33 +150,6 @@ async function test(name, fn) {
     await markAllRead(req, res);
     assert.strictEqual(captured.status, 500);
     assert.ok(captured.data.error);
-  });
-
-  // ── GROUP 4: Demo data shape ────────────────────────────────────────────────
-  console.log('\nGroup 4 — Demo notification data shape');
-
-  await test('Each demo notification has required fields', async () => {
-    const { getNotifications } = loadController(makeMockPool([[]]));
-    const { req, res, captured } = mockReqRes();
-    await getNotifications(req, res);
-    const REQUIRED = ['notification_id', 'type', 'title', 'message', 'is_read', 'created_at'];
-    for (const n of captured.data.notifications) {
-      for (const field of REQUIRED) {
-        assert.ok(field in n, `Demo notification missing field: ${field}`);
-      }
-    }
-  });
-
-  await test('Demo notification IDs start with "demo-"', async () => {
-    const { getNotifications } = loadController(makeMockPool([[]]));
-    const { req, res, captured } = mockReqRes();
-    await getNotifications(req, res);
-    for (const n of captured.data.notifications) {
-      assert.ok(
-        String(n.notification_id).startsWith('demo-'),
-        `Expected demo ID, got: ${n.notification_id}`
-      );
-    }
   });
 
   // ── Summary ───────────────────────────────────────────────────────────────

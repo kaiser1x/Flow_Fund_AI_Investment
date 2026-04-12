@@ -69,7 +69,13 @@ async function runSchema() {
     // bank_accounts: Plaid aggregator support
     await conditionalAddColumn(conn, db, 'bank_accounts', 'plaid_account_id', 'VARCHAR(100) UNIQUE');
     await conditionalAddColumn(conn, db, 'bank_accounts', 'plaid_item_id',    'VARCHAR(255)');
-    await conditionalAddColumn(conn, db, 'bank_accounts', 'mask',             'VARCHAR(10)');
+    await conditionalAddColumn(conn, db, 'bank_accounts', 'mask',             'VARCHAR(32)');
+
+    try {
+      await conn.query('ALTER TABLE bank_accounts MODIFY COLUMN mask VARCHAR(32) NULL');
+    } catch (err) {
+      if (err?.code !== 'ER_BAD_FIELD_ERROR' && err?.code !== 'ER_NO_SUCH_TABLE') throw err;
+    }
 
     // transactions: deduplication key for imported aggregator records
     await conditionalAddColumn(conn, db, 'transactions', 'plaid_transaction_id', 'VARCHAR(100) UNIQUE');
@@ -78,6 +84,27 @@ async function runSchema() {
     await conditionalAddColumn(conn, db, 'transactions', 'merchant_name', 'VARCHAR(150)');
     await conditionalAddColumn(conn, db, 'transactions', 'pending',       'BOOLEAN DEFAULT FALSE');
     await conditionalAddColumn(conn, db, 'transactions', 'source',        "VARCHAR(20) DEFAULT 'plaid'");
+
+    // plaid_items: cursor for /transactions/sync (per Plaid Item)
+    await conditionalAddColumn(conn, db, 'plaid_items', 'transactions_sync_cursor', 'TEXT NULL');
+
+    // financial_metrics: DECIMAL(5,2) capped volatility at 999.99 — Plaid expense std-dev can exceed that
+    try {
+      await conn.query(
+        'ALTER TABLE financial_metrics MODIFY COLUMN volatility_score DECIMAL(15,4) NULL'
+      );
+      console.log('  ~ financial_metrics.volatility_score widened to DECIMAL(15,4)');
+    } catch (err) {
+      if (err?.code !== 'ER_BAD_FIELD_ERROR' && err?.code !== 'ER_NO_SUCH_TABLE') throw err;
+    }
+    try {
+      await conn.query(
+        'ALTER TABLE financial_metrics MODIFY COLUMN cash_buffer_months DECIMAL(15,4) NULL'
+      );
+      console.log('  ~ financial_metrics.cash_buffer_months widened to DECIMAL(15,4)');
+    } catch (err) {
+      if (err?.code !== 'ER_BAD_FIELD_ERROR' && err?.code !== 'ER_NO_SUCH_TABLE') throw err;
+    }
 
     console.log('Schema applied.');
   } finally {

@@ -1,19 +1,20 @@
 import axios from 'axios';
 
 const apiUrl = import.meta.env.VITE_API_URL;
+const API_BASE = `${apiUrl || ''}/api/financial`;
 
-const api = axios.create({
-  baseURL: `${apiUrl || ''}/api/investment-readiness`,
+const client = axios.create({
+  baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
 });
 
-api.interceptors.request.use((config) => {
+client.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-api.interceptors.response.use(
+client.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401) {
@@ -24,6 +25,6 @@ api.interceptors.response.use(
   }
 );
 
-export const getInvestmentReadiness = () => api.get('/');
+export const getDemoCustomerAccounts = () => client.get('/demo-customer-accounts');
 
-export const getStockIdeas = () => api.get('/stock-ideas');
+export default client;

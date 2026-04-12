@@ -233,49 +233,6 @@ function validateInputs(scenario_type, inputs) {
   return errs;
 }
 
-// ── Demo seed data ────────────────────────────────────────────────────────────
-function getDemoSnapshots() {
-  const ago = (days) => new Date(Date.now() - days * 86400000).toISOString();
-  return [
-    {
-      sim_id: 'demo-1',
-      name: 'Retirement Savings',
-      scenario_type: 'compound_interest',
-      inputs: { initial_amount: 5000, monthly_contribution: 300, annual_rate: 7, years: 20 },
-      result_summary: { final_value: 186369.59, total_contributed: 77000, total_interest: 109369.59, years: 20 },
-      projection_data: [],  // not needed for widget display
-      created_at: ago(10),
-    },
-    {
-      sim_id: 'demo-2',
-      name: 'S&P 500 Growth',
-      scenario_type: 'stock_market',
-      inputs: { initial_amount: 10000, monthly_contribution: 500, annual_rate: 10, years: 15, volatility: 'medium' },
-      result_summary: { base_value: 208432.10, optimistic_value: 295168.14, pessimistic_value: 130945.75, years: 15 },
-      projection_data: [],
-      created_at: ago(5),
-    },
-    {
-      sim_id: 'demo-3',
-      name: 'Credit Card Payoff',
-      scenario_type: 'debt_payoff',
-      inputs: { principal: 8000, annual_rate: 18, monthly_payment: 250 },
-      result_summary: { months_to_payoff: 42, total_interest: 2498.17, total_paid: 10498.17, principal: 8000 },
-      projection_data: [],
-      created_at: ago(2),
-    },
-    {
-      sim_id: 'demo-4',
-      name: '6-Month Emergency Fund',
-      scenario_type: 'emergency_fund',
-      inputs: { monthly_expenses: 508.55, target_months: 6, current_savings: 1247.82, monthly_contribution: 200 },
-      result_summary: { target_amount: 3051.30, months_to_goal: 9, completion_date: '', current_savings: 1247.82 },
-      projection_data: [],
-      created_at: ago(1),
-    },
-  ];
-}
-
 // ── Pre-fill data from existing services ──────────────────────────────────────
 async function getPreFillData(user_id) {
   const now   = new Date();
@@ -373,8 +330,8 @@ exports.getSnapshots = async (req, res) => {
       [uid]
     );
     if (rows.length === 0) {
-      console.log(`[SIM_GET] no snapshots → demo`);
-      return res.json({ snapshots: getDemoSnapshots(), source: 'demo' });
+      console.log(`[SIM_GET] no snapshots → empty`);
+      return res.json({ snapshots: [], source: 'empty' });
     }
     // Parse JSON fields
     const snapshots = rows.map(r => ({
@@ -386,7 +343,7 @@ exports.getSnapshots = async (req, res) => {
     res.json({ snapshots, source: 'db' });
   } catch (err) {
     console.error('[SIM_GET_ERROR]', err.message);
-    res.json({ snapshots: getDemoSnapshots(), source: 'demo' });
+    res.json({ snapshots: [], source: 'empty' });
   }
 };
 
@@ -406,8 +363,7 @@ exports.getSnapshotsSummary = async (req, res) => {
     const total = parseInt(countRows[0].cnt, 10) || 0;
 
     if (total === 0) {
-      const demo = getDemoSnapshots();
-      return res.json({ snapshots: demo.slice(0, 3), total_count: demo.length, source: 'demo' });
+      return res.json({ snapshots: [], total_count: 0, source: 'empty' });
     }
     const snapshots = rows.map(r => ({
       ...r,
@@ -417,8 +373,7 @@ exports.getSnapshotsSummary = async (req, res) => {
     res.json({ snapshots, total_count: total, source: 'db' });
   } catch (err) {
     console.error('[SIM_SUMMARY_ERROR]', err.message);
-    const demo = getDemoSnapshots();
-    res.json({ snapshots: demo.slice(0, 3), total_count: demo.length, source: 'demo' });
+    res.json({ snapshots: [], total_count: 0, source: 'empty' });
   }
 };
 
