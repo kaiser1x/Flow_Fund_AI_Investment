@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { sendMessage } from '../api/chat';
 
 const C = {
@@ -25,11 +25,14 @@ export default function ChatPanel({ hasLinkedAccounts }) {
     ? "Hi! I can see your linked account data. Ask me anything about your spending patterns, savings habits, or financial health."
     : "Hi! I'm your FlowFund AI assistant. Connect a bank account on the dashboard and sync — then I can answer using your real transaction data.";
 
+  const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([{ role: 'bot', text: greeting }]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
   const inputRef  = useRef(null);
+
+  const toggle = useCallback(() => setIsOpen(o => !o), []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -52,6 +55,9 @@ export default function ChatPanel({ hasLinkedAccounts }) {
     }
   };
 
+  // Show a badge when collapsed and a conversation has started
+  const hasConversation = messages.length > 1;
+
   return (
     <div style={{
       background: C.surface,
@@ -59,19 +65,32 @@ export default function ChatPanel({ hasLinkedAccounts }) {
       border: `1px solid ${C.border}`,
       boxShadow: '0 2px 4px rgba(15,45,37,0.05), 0 8px 24px rgba(15,45,37,0.07)',
       display: 'flex', flexDirection: 'column',
-      height: 'calc(100vh - 120px)',
-      minHeight: '460px',
-      maxHeight: '680px',
+      ...(isOpen ? {
+        height: 'calc(100vh - 120px)',
+        minHeight: '460px',
+        maxHeight: '680px',
+      } : {}),
       overflow: 'hidden',
     }}>
 
-      {/* Header */}
-      <div style={{
-        padding: '15px 20px',
-        background: `linear-gradient(135deg, ${C.ink} 0%, ${C.brand} 100%)`,
-        display: 'flex', alignItems: 'center', gap: '10px',
-        flexShrink: 0,
-      }}>
+      {/* Header — always visible, acts as the toggle trigger */}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={isOpen}
+        aria-label={isOpen ? 'Collapse AI assistant' : 'Expand AI assistant'}
+        onClick={toggle}
+        onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && toggle()}
+        style={{
+          padding: '15px 20px',
+          background: `linear-gradient(135deg, ${C.ink} 0%, ${C.brand} 100%)`,
+          display: 'flex', alignItems: 'center', gap: '10px',
+          flexShrink: 0,
+          cursor: 'pointer',
+          borderRadius: isOpen ? '16px 16px 0 0' : '16px',
+          userSelect: 'none',
+        }}
+      >
         <div style={{
           width: 32, height: 32, borderRadius: '10px',
           background: 'rgba(46,204,138,0.18)',
@@ -84,17 +103,41 @@ export default function ChatPanel({ hasLinkedAccounts }) {
           <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff', letterSpacing: '-0.01em' }}>
             FlowFund AI
           </div>
-          <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)' }}>Educational Assistant</div>
+          <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)' }}>
+            {isOpen ? 'Educational Assistant' : (hasConversation ? 'Conversation in progress' : 'Tap to open')}
+          </div>
         </div>
+        {/* Unread dot when collapsed with an active conversation */}
+        {!isOpen && hasConversation && (
+          <div style={{
+            width: 8, height: 8, borderRadius: '50%',
+            background: C.accent,
+            boxShadow: `0 0 0 3px rgba(46,204,138,0.2)`,
+            marginRight: 4,
+          }} />
+        )}
+        {/* Live indicator when open */}
+        {isOpen && (
+          <div style={{
+            width: 8, height: 8, borderRadius: '50%',
+            background: C.accent,
+            boxShadow: `0 0 0 3px rgba(46,204,138,0.2)`,
+            marginRight: 4,
+          }} />
+        )}
+        {/* Chevron */}
         <div style={{
-          width: 8, height: 8, borderRadius: '50%',
-          background: C.accent,
-          boxShadow: `0 0 0 3px rgba(46,204,138,0.2)`,
-        }} />
+          fontSize: '12px', color: 'rgba(255,255,255,0.7)',
+          transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+          transition: 'transform 0.2s ease',
+          lineHeight: 1,
+        }}>
+          ▾
+        </div>
       </div>
 
-      {/* Messages */}
-      <div style={{
+      {/* Body — only rendered when open */}
+      {isOpen && <div style={{
         flex: 1, overflowY: 'auto',
         padding: '16px 14px',
         display: 'flex', flexDirection: 'column', gap: '10px',
@@ -152,10 +195,10 @@ export default function ChatPanel({ hasLinkedAccounts }) {
           </div>
         )}
         <div ref={bottomRef} />
-      </div>
+      </div>}
 
       {/* Suggested prompts — only on first load */}
-      {messages.length <= 1 && !loading && (
+      {isOpen && messages.length <= 1 && !loading && (
         <div style={{
           padding: '8px 12px',
           borderTop: `1px solid ${C.border}`,
@@ -183,17 +226,17 @@ export default function ChatPanel({ hasLinkedAccounts }) {
       )}
 
       {/* Disclaimer */}
-      <div style={{
+      {isOpen && <div style={{
         padding: '5px 14px', flexShrink: 0,
         borderTop: `1px solid ${C.border}`,
         fontSize: '10px', color: C.faint,
         textAlign: 'center', lineHeight: 1.5,
       }}>
         Educational insights only · Not financial advice · Not a licensed advisor
-      </div>
+      </div>}
 
       {/* Input */}
-      <div style={{
+      {isOpen && <div style={{
         padding: '10px 12px', flexShrink: 0,
         borderTop: `1px solid ${C.border}`,
         display: 'flex', gap: '8px',
@@ -231,7 +274,7 @@ export default function ChatPanel({ hasLinkedAccounts }) {
         >
           ↑
         </button>
-      </div>
+      </div>}
     </div>
   );
 }

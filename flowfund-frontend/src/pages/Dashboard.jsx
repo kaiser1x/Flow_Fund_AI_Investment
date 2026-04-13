@@ -8,6 +8,8 @@ import usePlaidLink from '../hooks/usePlaidLink';
 import ChatPanel from '../components/ChatPanel';
 import TransactionFeed from '../components/TransactionFeed';
 import HistoricalAnalysis from '../components/HistoricalAnalysis';
+import MicroSavingsCard from '../components/MicroSavingsCard';
+import SpendingPersonalityCard from '../components/SpendingPersonalityCard';
 import AppHeader, { LogoMark } from '../components/AppHeader';
 import InvestmentReadinessWidget from '../components/InvestmentReadinessWidget';
 import GoalsWidget from '../components/GoalsWidget';
@@ -798,6 +800,8 @@ export default function Dashboard() {
               loading={txnLoading}
             />
             <InsightsCard transactions={transactions} isDemo={false} hasBankLink={accounts.length > 0} />
+            <MicroSavingsCard transactions={transactions} hasBankLink={accounts.length > 0} />
+            <SpendingPersonalityCard transactions={transactions} hasBankLink={accounts.length > 0} />
             <HistoricalAnalysis />
           </div>
 
