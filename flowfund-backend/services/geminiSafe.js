@@ -17,7 +17,7 @@
 const getGeminiClient = require('../config/gemini');
 
 const GEMINI_MODEL  = 'gemini-2.5-flash';
-const TIMEOUT_MS    = 5_000;   // max ms to wait for a single attempt
+const TIMEOUT_MS    = 15_000;   // max ms to wait for a single attempt
 const MAX_RETRIES   = 3;       // total attempts before giving up
 const RETRY_DELAY   = 1_000;   // ms to wait between retries
 
