@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { scoreFromFeatures } = require('./readinessHuggingFaceService');
 
 let _financialMetricsColumnsWidened = false;
 let _financialMetricsWidenAttempted = false;
@@ -19,6 +20,26 @@ async function ensureFinancialMetricsNumericWidth() {
   } catch (err) {
     console.warn('[METRICS] Could not auto-widen columns (run npm run db:schema):', err.message);
   }
+}
+
+/** Rule-based fallback when HuggingFace is unavailable. */
+function ruleBasedScore({ monthly_income, savings_rate, cash_buffer_months, volatility_score }) {
+  let score = 0;
+  if (monthly_income     >   0) score += 20;
+  if (savings_rate       >=  20) score += 30;
+  if (cash_buffer_months >=  3)  score += 30;
+  if (volatility_score   <= 100) score += 20;
+
+  const fallbackRecommendations = {
+    HIGH:   'Your financial profile shows strong readiness. Consider exploring low-risk index funds.',
+    MEDIUM: 'You are making progress. Focus on growing your cash buffer and reducing expense volatility.',
+    LOW:    'Build an emergency fund and reduce discretionary spending before investing.',
+  };
+  let band;
+  if (score >= 70)      band = 'HIGH';
+  else if (score >= 40) band = 'MEDIUM';
+  else                  band = 'LOW';
+  return { score, recommendation: fallbackRecommendations[band] };
 }
 
 /**
@@ -113,25 +134,29 @@ async function calculate(user_id) {
      savings_rate.toFixed(2), volatility_score.toFixed(2), cash_buffer_months.toFixed(2)]
   );
 
-  // ── Investment readiness score (rule-based, feeds investment_scores) ──────
-  let score = 0;
-  if (monthly_income   >   0) score += 20;
-  if (savings_rate     >=  20) score += 30;
-  if (cash_buffer_months >= 3) score += 30;
-  if (volatility_score <=  100) score += 20;
+  // ── Investment readiness score (HuggingFace-first, rule-based fallback) ──
+  const features = { monthly_income, monthly_expenses, savings_rate, volatility_score, cash_buffer_months };
+  const hfResult = await scoreFromFeatures(features);
 
-  const risk_level = score >= 70 ? 'HIGH' : score >= 40 ? 'MEDIUM' : 'LOW';
+  let score, recommendation;
+  if (hfResult.ok) {
+    score          = hfResult.score;
+    recommendation = hfResult.recommendation;
+    console.log(`[METRICS] HuggingFace readiness score: ${score}`);
+  } else {
+    console.log(`[METRICS] HuggingFace unavailable (${hfResult.reason}), using rule-based fallback`);
+    ({ score, recommendation } = ruleBasedScore(features));
+  }
 
-  const recommendations = {
-    HIGH:   'Your financial profile shows strong readiness. Consider exploring low-risk index funds.',
-    MEDIUM: 'You are making progress. Focus on growing your cash buffer and reducing expense volatility.',
-    LOW:    'Build an emergency fund and reduce discretionary spending before investing.',
-  };
+  let risk_level;
+  if (score >= 70)      risk_level = 'HIGH';
+  else if (score >= 40) risk_level = 'MEDIUM';
+  else                  risk_level = 'LOW';
 
   await pool.query(
     `INSERT INTO investment_scores (user_id, score_value, risk_level, recommendation)
      VALUES (?, ?, ?, ?)`,
-    [user_id, score, risk_level, recommendations[risk_level]]
+    [user_id, score, risk_level, recommendation]
   );
 
   return { monthly_income, monthly_expenses, savings_rate, volatility_score, cash_buffer_months, score, risk_level };
