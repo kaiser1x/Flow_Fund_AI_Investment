@@ -35,6 +35,7 @@ exports.register = async (req, res) => {
 
     // Generate and send OTP
     const otp = generateOtp();
+    console.log('this is the otp', otp);
     const otpHash = await bcrypt.hash(otp, 10);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
     const expiresAtStr = expiresAt.toISOString().slice(0, 19).replace('T', ' ');
