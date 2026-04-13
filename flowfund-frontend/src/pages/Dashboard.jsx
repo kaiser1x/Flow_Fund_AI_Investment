@@ -208,7 +208,7 @@ function BankAccountsCard({
                 whiteSpace: 'nowrap',
               }}
             >
-              Sandbox refresh
+              Refresh
             </button>
           )}
           <button
@@ -539,6 +539,7 @@ export default function Dashboard() {
   const [syncLoading, setSyncLoading] = useState(false);
   const [readinessRefresh, setReadinessRefresh] = useState(0);
   const bumpReadiness = useCallback(() => setReadinessRefresh((n) => n + 1), []);
+  const [dashTab, setDashTab] = useState('overview');
   const [vw, setVw] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
 
   useEffect(() => {
@@ -776,33 +777,62 @@ export default function Dashboard() {
         }}>
           {/* Left column */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <BankAccountsCard
-              accounts={accounts} accountsLoading={accountsLoading} accountsError={accountsError}
-              accountsErrorCode={accountsErrorCode}
-              successMessage={successMessage} plaidError={plaidError}
-              onOpenPlaid={openPlaid} onRetry={retryLinkToken}
-              loadingToken={loadingToken} linking={linking} ready={ready}
-              onSyncFromBank={handleSyncFromBank}
-              onSandboxRefresh={handleSandboxRefresh}
-              syncLoading={syncLoading}
-              onDisconnectBank={handleDisconnectBank}
-              disconnectLoading={disconnectLoading}
-              hasPlaidLinked={hasPlaidLinked}
-              disconnectStep={disconnectStep}
-              onDisconnectBankStepClick={onDisconnectBankStepClick}
-              onDisconnectModalCancel={() => setDisconnectStep(0)}
-              onDisconnectFinalConfirm={handleDisconnectBank}
-            />
-            <TransactionFeed
-              transactions={transactions}
-              isDemo={false}
-              hasBankLink={accounts.length > 0}
-              loading={txnLoading}
-            />
-            <InsightsCard transactions={transactions} isDemo={false} hasBankLink={accounts.length > 0} />
-            <MicroSavingsCard transactions={transactions} hasBankLink={accounts.length > 0} />
-            <SpendingPersonalityCard transactions={transactions} hasBankLink={accounts.length > 0} />
-            <HistoricalAnalysis />
+
+            {/* Dashboard section tabs */}
+            <div style={{ display: 'flex', gap: 4 }}>
+              {[
+                { key: 'overview', label: 'Overview' },
+                { key: 'history', label: 'Historical Analysis' },
+              ].map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setDashTab(tab.key)}
+                  style={{
+                    padding: '7px 16px',
+                    background: dashTab === tab.key ? C.brand : 'transparent',
+                    color: dashTab === tab.key ? '#fff' : C.muted,
+                    border: `1px solid ${dashTab === tab.key ? C.brand : C.border}`,
+                    borderRadius: 99, fontSize: 12, fontWeight: 600,
+                    cursor: 'pointer', transition: 'all 0.15s',
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {dashTab === 'overview' && (
+              <>
+                <BankAccountsCard
+                  accounts={accounts} accountsLoading={accountsLoading} accountsError={accountsError}
+                  accountsErrorCode={accountsErrorCode}
+                  successMessage={successMessage} plaidError={plaidError}
+                  onOpenPlaid={openPlaid} onRetry={retryLinkToken}
+                  loadingToken={loadingToken} linking={linking} ready={ready}
+                  onSyncFromBank={handleSyncFromBank}
+                  onSandboxRefresh={handleSandboxRefresh}
+                  syncLoading={syncLoading}
+                  onDisconnectBank={handleDisconnectBank}
+                  disconnectLoading={disconnectLoading}
+                  hasPlaidLinked={hasPlaidLinked}
+                  disconnectStep={disconnectStep}
+                  onDisconnectBankStepClick={onDisconnectBankStepClick}
+                  onDisconnectModalCancel={() => setDisconnectStep(0)}
+                  onDisconnectFinalConfirm={handleDisconnectBank}
+                />
+                <TransactionFeed
+                  transactions={transactions}
+                  isDemo={false}
+                  hasBankLink={accounts.length > 0}
+                  loading={txnLoading}
+                />
+                <InsightsCard transactions={transactions} isDemo={false} hasBankLink={accounts.length > 0} />
+                <MicroSavingsCard transactions={transactions} hasBankLink={accounts.length > 0} />
+                <SpendingPersonalityCard transactions={transactions} hasBankLink={accounts.length > 0} />
+              </>
+            )}
+
+            {dashTab === 'history' && <HistoricalAnalysis />}
           </div>
 
           {/* Right column */}

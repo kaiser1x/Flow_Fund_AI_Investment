@@ -173,12 +173,11 @@ exports.getGoals = async (req, res) => {
   console.log(`[GOALS_GET] user_id=${uid} filter=${filter}`);
 
   try {
-    let statusClause = '';
-    if (filter === 'active')    statusClause = `AND g.status = 'active'`;
-    if (filter === 'completed') statusClause = `AND g.status = 'completed'`;
-
+    // Fetch all goals first, then filter after enrichment so the computed
+    // status_label (based on progress_pct) is authoritative — the raw DB
+    // status field can lag behind actual funding progress.
     const [rows] = await pool.query(
-      `SELECT * FROM goals WHERE user_id = ? ${statusClause} ORDER BY created_at DESC`,
+      `SELECT * FROM goals WHERE user_id = ? ORDER BY created_at DESC`,
       [uid]
     );
 
@@ -187,14 +186,23 @@ exports.getGoals = async (req, res) => {
       return res.json({ goals: [], source: 'empty' });
     }
 
-    // Auto-track supported goal types
+    // Auto-track supported goal types and compute enriched status_label
     const enriched = await Promise.all(rows.map(async g => {
       const tracked = await autoTrackAmount(g, uid);
       return enrichGoal({ ...g, current_amount: tracked });
     }));
 
-    console.log(`[GOALS_GET] source=db count=${enriched.length}`);
-    res.json({ goals: enriched, source: 'db' });
+    // Apply tab filter on enriched data so completed goals (progress_pct >= 100)
+    // always land in the Completed tab, even if DB status is still 'active'.
+    let result = enriched;
+    if (filter === 'active') {
+      result = enriched.filter(g => g.status_label !== 'Completed' && g.status !== 'archived');
+    } else if (filter === 'completed') {
+      result = enriched.filter(g => g.status_label === 'Completed');
+    }
+
+    console.log(`[GOALS_GET] source=db count=${result.length}`);
+    res.json({ goals: result, source: 'db' });
 
   } catch (err) {
     console.error('[GOALS_GET_ERROR]', err.message);
