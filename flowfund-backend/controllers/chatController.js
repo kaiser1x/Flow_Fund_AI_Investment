@@ -1,7 +1,5 @@
-const getGeminiClient = require('../config/gemini');
+const { safeGenerateContent } = require('../services/geminiSafe');
 const { buildSnapshot } = require('../services/snapshotService');
-
-const GEMINI_MODEL = 'gemini-2.5-flash';
 
 const SYSTEM_INSTRUCTIONS = `
 You are FlowFund AI's financial education assistant. You help users understand their spending patterns and improve their financial health.
@@ -109,34 +107,11 @@ exports.sendMessage = async (req, res) => {
     });
   }
 
-  // ── Gemini ────────────────────────────────────────────────────────────────
-  let ai;
-  try {
-    ai = getGeminiClient();
-    console.log('[GEMINI_CLIENT_OK]');
-  } catch (err) {
-    console.error('[GEMINI_KEY_MISSING]', err.message);
-    return res.status(500).json({ error: 'Failed to generate response' });
-  }
-
+  // ── Gemini (safe wrapper: timeout + retry + fallback, never crashes) ─────
   const fullPrompt = `${SYSTEM_INSTRUCTIONS}\n\n${buildContextPrompt(snapshot, isDemo)}\n\nUser question: ${message.trim()}`;
-  console.log(`[GEMINI_REQUEST_START] model=${GEMINI_MODEL} promptLen=${fullPrompt.length} isDemo=${isDemo}`);
+  console.log(`[GEMINI_REQUEST_START] promptLen=${fullPrompt.length} isDemo=${isDemo}`);
 
-  let result;
-  try {
-    result = await ai.models.generateContent({ model: GEMINI_MODEL, contents: fullPrompt });
-    console.log('[GEMINI_RESPONSE_RECEIVED]');
-  } catch (err) {
-    console.error('[GEMINI_CALL_FAILED]', { message: err.message, status: err.status, errorDetails: err.errorDetails });
-    return res.status(500).json({ error: 'Failed to generate response' });
-  }
-
-  const responseText = result.text;
-  if (!responseText) {
-    console.error('[GEMINI_RESPONSE_EMPTY]', JSON.stringify(result).slice(0, 300));
-    return res.status(500).json({ error: 'Failed to generate response' });
-  }
-
+  const responseText = await safeGenerateContent(fullPrompt);
   console.log(`[CHAT_REPLY_SENT] replyLen=${responseText.length} isDemo=${isDemo}`);
   res.json({ reply: responseText, hasFinancialData: true, isDemo });
 };

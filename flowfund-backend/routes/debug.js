@@ -26,17 +26,15 @@ router.get('/ai-health', async (_req, res) => {
   }
 
   try {
-    const getGeminiClient = require('../config/gemini');
-    const ai = getGeminiClient();
+    // Use safeGenerateContent so the health-check is also timeout-protected
+    // and cannot stall the process.
+    const { safeGenerateContent, FALLBACK_REPLY } = require('../services/geminiSafe');
     report.geminiClientInitialized = true;
 
-    const result = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: 'Reply with exactly: OK',
-    });
-    const text = result.text?.trim();
-    report.geminiTestCallSuccess = !!text;
-    if (!text) report.error = 'Gemini returned empty response';
+    const text = await safeGenerateContent('Reply with exactly: OK');
+    const succeeded = !!text && text !== FALLBACK_REPLY;
+    report.geminiTestCallSuccess = succeeded;
+    if (!succeeded) report.error = 'Gemini call failed or timed out (check server logs)';
   } catch (err) {
     report.error = err.message;
   }
