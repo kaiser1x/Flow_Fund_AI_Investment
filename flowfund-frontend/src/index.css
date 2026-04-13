@@ -12,8 +12,32 @@ body {
   color: #E8F4F0;
 }
 
+/* ── Subtle top-glow accent (Acorns-style ambient light) ──────────────────── */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 520px;
+  background: radial-gradient(ellipse 75% 100% at 50% 0%, rgba(46, 204, 138, 0.07) 0%, transparent 68%);
+  pointer-events: none;
+  z-index: 0;
+}
+
 #root {
   min-height: 100vh;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Card hover lift — add className="ff-lift" to any hoverable card ──────── */
+.ff-lift {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  border-radius: 16px;
+}
+.ff-lift:hover {
+  transform: translateY(-2px);
 }
 
 /* ── Scrollbar styling for dark theme ─────────────────────────────────────── */

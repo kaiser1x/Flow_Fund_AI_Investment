@@ -4,6 +4,7 @@ export const C = {
   bgAlt:        '#040914',          // Slightly deeper alt background
   surface:      '#0D1B2A',          // Card / panel surface
   surfaceHover: '#0F2035',          // Surface on hover
+  surfaceGlow:  'linear-gradient(135deg, #0f2d1e 0%, #0d1b2a 100%)', // Hero card accent
 
   // ── Text ───────────────────────────────────────────────────────────────────
   ink:   '#E8F4F0',                          // Primary text
@@ -17,11 +18,14 @@ export const C = {
   accentFade: 'rgba(46,204,138,0.12)',        // Accent with opacity (badges, bg tints)
 
   // ── Borders & Dividers ─────────────────────────────────────────────────────
-  border: 'rgba(255,255,255,0.07)',           // Subtle divider on dark
+  border:       'rgba(255,255,255,0.07)',     // Subtle divider on dark
+  borderHover:  'rgba(255,255,255,0.13)',     // Brighter border on hover
+  borderAccent: 'rgba(46,204,138,0.28)',      // Brand-tinted border
 
   // ── Shadows ────────────────────────────────────────────────────────────────
-  shadow:   '0 4px 24px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.04)',
-  shadowSm: '0 2px 8px rgba(0,0,0,0.3)',
+  shadow:      '0 4px 24px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.04)',
+  shadowSm:    '0 2px 8px rgba(0,0,0,0.3)',
+  shadowHover: '0 8px 32px rgba(0,0,0,0.55), 0 1px 0 rgba(255,255,255,0.06)',
 
   // ── Status colors ──────────────────────────────────────────────────────────
   danger:  '#f87171',

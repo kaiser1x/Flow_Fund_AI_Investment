@@ -106,7 +106,7 @@ export default function InvestmentReadinessWidget({ refreshToken = 0 }) {
         /* Shimmer */
         <div style={{
           width: 120, height: 120, borderRadius: '50%',
-          background: 'linear-gradient(90deg, #e8ede9 0%, #d4ddd8 50%, #e8ede9 100%)',
+          background: 'linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 100%)',
           backgroundSize: '400px 100%',
           animation: 'ff-shimmer 1.4s ease infinite',
         }} />

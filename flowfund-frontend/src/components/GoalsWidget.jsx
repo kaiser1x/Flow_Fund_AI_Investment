@@ -105,12 +105,12 @@ export default function GoalsWidget() {
             <div key={i} style={{ padding: '12px 0', borderBottom: `1px solid ${C.border}` }}>
               <div style={{
                 height: 12, borderRadius: 6, width: `${w}%`, marginBottom: 6,
-                background: 'linear-gradient(90deg, #e8ede9 0%, #d4ddd8 50%, #e8ede9 100%)',
+                background: 'linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 100%)',
                 backgroundSize: '400px 100%', animation: 'ff-shimmer 1.4s ease infinite',
               }} />
               <div style={{
                 height: 6, borderRadius: 99, width: '100%',
-                background: 'linear-gradient(90deg, #e8ede9 0%, #d4ddd8 50%, #e8ede9 100%)',
+                background: 'linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 100%)',
                 backgroundSize: '400px 100%', animation: 'ff-shimmer 1.4s ease infinite',
               }} />
             </div>

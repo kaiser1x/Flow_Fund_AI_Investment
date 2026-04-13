@@ -40,13 +40,29 @@ function useKeyframes() {
 }
 
 // ─── StatCard ────────────────────────────────────────────────────────────────
-function StatCard({ icon, label, value, sub, valueColor, shimmer }) {
+function StatCard({ icon, label, value, sub, valueColor, shimmer, accent }) {
+  const [hov, setHov] = useState(false);
   return (
-    <div style={{
-      background: C.surface, borderRadius: C.r,
-      border: `1px solid ${C.border}`, boxShadow: C.shadowSm,
-      padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: '8px',
-    }}>
+    <div
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        background: accent ? 'linear-gradient(135deg, #0f2d1e 0%, #0d1b2a 100%)' : C.surface,
+        borderRadius: C.r,
+        border: accent
+          ? '1px solid rgba(46,204,138,0.28)'
+          : `1px solid ${hov ? C.borderHover : C.border}`,
+        boxShadow: hov
+          ? C.shadowHover
+          : accent
+            ? '0 4px 20px rgba(46,204,138,0.09), 0 2px 8px rgba(0,0,0,0.3)'
+            : C.shadowSm,
+        padding: '20px 22px',
+        display: 'flex', flexDirection: 'column', gap: '8px',
+        transform: hov ? 'translateY(-2px)' : 'translateY(0)',
+        transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease',
+      }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{
           fontSize: '11px', fontWeight: 700, color: C.faint,
@@ -81,70 +97,6 @@ function StatCard({ icon, label, value, sub, valueColor, shimmer }) {
         </div>
       )}
       {sub && <div style={{ fontSize: '12px', color: C.muted }}>{sub}</div>}
-    </div>
-  );
-}
-
-// ─── ProfileCard ─────────────────────────────────────────────────────────────
-function ProfileCard({ profile, accountsCount, onNavigateToProfile }) {
-  if (!profile) return null;
-  const name = [profile.first_name, profile.last_name].filter(Boolean).join(' ') || 'User';
-  const initials = [profile.first_name, profile.last_name]
-    .filter(Boolean).map(n => n[0]?.toUpperCase()).join('') || 'FF';
-
-  return (
-    // Clicking the card navigates to /profile (no visual change)
-    <div
-      onClick={onNavigateToProfile}
-      title="View profile"
-      style={{
-        background: C.surface, borderRadius: C.r,
-        border: `1px solid ${C.border}`, boxShadow: C.shadow,
-        overflow: 'hidden', cursor: 'pointer',
-      }}
-    >
-      <div style={{ height: '4px', background: `linear-gradient(90deg, ${C.brand} 0%, ${C.accent} 100%)` }} />
-      <div style={{ padding: '22px 24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
-          <div style={{
-            width: 46, height: 46, borderRadius: '14px', flexShrink: 0,
-            background: 'linear-gradient(135deg, #1a3a5c 0%, #0f2d25 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '17px', fontWeight: 800, color: '#fff',
-          }}>
-            {initials}
-          </div>
-          <div>
-            <div style={{ fontSize: '15px', fontWeight: 700, color: C.ink, lineHeight: 1.2 }}>{name}</div>
-            <span style={{
-              display: 'inline-block', marginTop: '5px',
-              padding: '2px 9px', borderRadius: '20px',
-              background: C.accentFade,
-              border: '1px solid rgba(46,204,138,0.22)',
-              fontSize: '11px', fontWeight: 600, color: C.brand,
-            }}>
-              {profile.role_name || 'Member'}
-            </span>
-          </div>
-        </div>
-
-        {[
-          { label: 'Email', val: profile.email },
-          { label: 'Connected', val: `${accountsCount} bank account${accountsCount !== 1 ? 's' : ''}` },
-        ].map(({ label, val }) => (
-          <div key={label} style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '10px 0', borderBottom: `1px solid ${C.border}`,
-          }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, color: C.faint, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-              {label}
-            </span>
-            <span style={{ fontSize: '13px', color: C.ink, fontWeight: 500, maxWidth: '60%', textAlign: 'right', wordBreak: 'break-word' }}>
-              {val}
-            </span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -763,10 +715,10 @@ export default function Dashboard() {
           gap: isMobile ? '12px' : '16px',
           marginBottom: '28px',
         }}>
-          <StatCard icon="💰" label="Total Balance"  value={statsLoading ? null : fmt(totalBalance)}         sub={`${accounts.length} account${accounts.length !== 1 ? 's' : ''}`}  shimmer={statsLoading} />
-          <StatCard icon="📊" label="Monthly Spend"  value={statsLoading ? null : fmt(monthlySpend)}          sub="Last 30 days"  valueColor={monthlySpend > 0 ? C.expense : C.ink} shimmer={statsLoading} />
-          <StatCard icon="📈" label="Savings Rate"   value={statsLoading ? null : (savingsRate !== null ? `${savingsRate}%` : '—')} sub="Of monthly income" valueColor={savingsRate !== null && savingsRate >= 20 ? C.income : C.ink} shimmer={statsLoading} />
-          <StatCard icon="🏷️" label="Top Category"   value={statsLoading ? null : topCategory}               sub="Highest spend"  shimmer={statsLoading} />
+          <StatCard icon="💰" label="Total Balance" value={statsLoading ? null : fmt(totalBalance)} sub={`${accounts.length} account${accounts.length !== 1 ? 's' : ''}`} shimmer={statsLoading} accent />
+          <StatCard icon="📊" label="Monthly Spend" value={statsLoading ? null : fmt(monthlySpend)} sub="Last 30 days" valueColor={monthlySpend > 0 ? C.expense : C.ink} shimmer={statsLoading} />
+          <StatCard icon="📈" label="Savings Rate" value={statsLoading ? null : (savingsRate !== null ? `${savingsRate}%` : '—')} sub="Of monthly income" valueColor={savingsRate !== null && savingsRate >= 20 ? C.income : C.ink} shimmer={statsLoading} />
+          <StatCard icon="🏷️" label="Top Category" value={statsLoading ? null : topCategory} sub="Highest spend" shimmer={statsLoading} />
         </div>
 
         {/* Main 2-column grid */}
@@ -780,7 +732,15 @@ export default function Dashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
             {/* Dashboard section tabs */}
-            <div style={{ display: 'flex', gap: 4 }}>
+            <div style={{
+              display: 'flex',
+              gap: 2,
+              background: 'rgba(255,255,255,0.04)',
+              border: `1px solid ${C.border}`,
+              borderRadius: '12px',
+              padding: '4px',
+              width: 'fit-content',
+            }}>
               {[
                 { key: 'overview', label: 'Overview' },
                 { key: 'history', label: 'Historical Analysis' },
@@ -789,12 +749,15 @@ export default function Dashboard() {
                   key={tab.key}
                   onClick={() => setDashTab(tab.key)}
                   style={{
-                    padding: '7px 16px',
-                    background: dashTab === tab.key ? C.brand : 'rgba(255,255,255,0.05)',
+                    padding: '7px 18px',
+                    background: dashTab === tab.key ? C.brand : 'transparent',
                     color: dashTab === tab.key ? '#fff' : C.muted,
-                    border: `1px solid ${dashTab === tab.key ? C.brand : C.border}`,
-                    borderRadius: 99, fontSize: 12, fontWeight: 600,
-                    cursor: 'pointer', transition: 'all 0.15s',
+                    border: 'none',
+                    borderRadius: '9px',
+                    fontSize: 12.5, fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'background 0.15s, color 0.15s',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {tab.label}
@@ -804,32 +767,49 @@ export default function Dashboard() {
 
             {dashTab === 'overview' && (
               <>
-                <BankAccountsCard
-                  accounts={accounts} accountsLoading={accountsLoading} accountsError={accountsError}
-                  accountsErrorCode={accountsErrorCode}
-                  successMessage={successMessage} plaidError={plaidError}
-                  onOpenPlaid={openPlaid} onRetry={retryLinkToken}
-                  loadingToken={loadingToken} linking={linking} ready={ready}
-                  onSyncFromBank={handleSyncFromBank}
-                  onSandboxRefresh={handleSandboxRefresh}
-                  syncLoading={syncLoading}
-                  onDisconnectBank={handleDisconnectBank}
-                  disconnectLoading={disconnectLoading}
-                  hasPlaidLinked={hasPlaidLinked}
-                  disconnectStep={disconnectStep}
-                  onDisconnectBankStepClick={onDisconnectBankStepClick}
-                  onDisconnectModalCancel={() => setDisconnectStep(0)}
-                  onDisconnectFinalConfirm={handleDisconnectBank}
-                />
-                <TransactionFeed
-                  transactions={transactions}
-                  isDemo={false}
-                  hasBankLink={accounts.length > 0}
-                  loading={txnLoading}
-                />
-                <InsightsCard transactions={transactions} isDemo={false} hasBankLink={accounts.length > 0} />
-                <MicroSavingsCard transactions={transactions} hasBankLink={accounts.length > 0} />
-                <SpendingPersonalityCard transactions={transactions} hasBankLink={accounts.length > 0} />
+                <div className="ff-lift">
+                  <BankAccountsCard
+                    accounts={accounts} accountsLoading={accountsLoading} accountsError={accountsError}
+                    accountsErrorCode={accountsErrorCode}
+                    successMessage={successMessage} plaidError={plaidError}
+                    onOpenPlaid={openPlaid} onRetry={retryLinkToken}
+                    loadingToken={loadingToken} linking={linking} ready={ready}
+                    onSyncFromBank={handleSyncFromBank}
+                    onSandboxRefresh={handleSandboxRefresh}
+                    syncLoading={syncLoading}
+                    onDisconnectBank={handleDisconnectBank}
+                    disconnectLoading={disconnectLoading}
+                    hasPlaidLinked={hasPlaidLinked}
+                    disconnectStep={disconnectStep}
+                    onDisconnectBankStepClick={onDisconnectBankStepClick}
+                    onDisconnectModalCancel={() => setDisconnectStep(0)}
+                    onDisconnectFinalConfirm={handleDisconnectBank}
+                  />
+                </div>
+                <div className="ff-lift">
+                  <TransactionFeed
+                    transactions={transactions}
+                    isDemo={false}
+                    hasBankLink={accounts.length > 0}
+                    loading={txnLoading}
+                  />
+                </div>
+                <div className="ff-lift">
+                  <InsightsCard transactions={transactions} isDemo={false} hasBankLink={accounts.length > 0} />
+                </div>
+                {/* Insight cards — 2-col grid on tablet+ */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                  gap: '24px',
+                }}>
+                  <div className="ff-lift">
+                    <MicroSavingsCard transactions={transactions} hasBankLink={accounts.length > 0} />
+                  </div>
+                  <div className="ff-lift">
+                    <SpendingPersonalityCard transactions={transactions} hasBankLink={accounts.length > 0} />
+                  </div>
+                </div>
               </>
             )}
 
@@ -837,13 +817,18 @@ export default function Dashboard() {
           </div>
 
           {/* Right column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-            <ProfileCard profile={profile} accountsCount={accounts.length} onNavigateToProfile={() => navigate('/profile')} />
-            <div style={{ position: 'sticky', top: '88px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ position: 'sticky', top: '88px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div className="ff-lift">
+                <InvestmentReadinessWidget refreshToken={readinessRefresh} />
+              </div>
               <ChatPanel hasLinkedAccounts={accounts.length > 0} />
-              <InvestmentReadinessWidget refreshToken={readinessRefresh} />
-              <GoalsWidget />
-              <SimulationsWidget />
+              <div className="ff-lift">
+                <GoalsWidget />
+              </div>
+              <div className="ff-lift">
+                <SimulationsWidget />
+              </div>
             </div>
           </div>
         </div>
