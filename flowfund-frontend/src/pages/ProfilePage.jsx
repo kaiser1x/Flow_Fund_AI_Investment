@@ -56,12 +56,12 @@ function InputField({ label, name, value, onChange, type = 'text', error, disabl
           borderRadius: C.rs,
           fontSize: '14px',
           color: C.ink,
-          background: disabled ? '#f8faf9' : C.surface,
+          background: disabled ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.05)',
           outline: 'none',
           width: '100%',
           boxSizing: 'border-box',
         }}
-        onFocus={e => { if (!disabled) e.target.style.borderColor = C.brand; }}
+        onFocus={e => { if (!disabled) e.target.style.borderColor = C.accent; }}
         onBlur={e => { e.target.style.borderColor = error ? C.danger : C.border; }}
       />
       {error && <span style={{ fontSize: '11px', color: C.danger }}>{error}</span>}
@@ -293,7 +293,7 @@ export default function ProfilePage() {
                   <InputField label="Date of Birth"   name="date_of_birth" type="date" value={form.date_of_birth} onChange={handleChange} disabled={saving} />
 
                   {/* Read-only fields in edit mode */}
-                  <div style={{ padding: '12px 14px', borderRadius: C.rs, background: '#f8faf9', border: `1px solid ${C.border}` }}>
+                  <div style={{ padding: '12px 14px', borderRadius: C.rs, background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}` }}>
                     <div style={{ fontSize: '11px', fontWeight: 700, color: C.faint, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: '4px' }}>Account Type</div>
                     <div style={{ fontSize: '14px', color: C.ink }}>{profile?.role_name || 'Member'} <span style={{ color: C.faint, fontSize: '12px' }}>(not editable)</span></div>
                   </div>

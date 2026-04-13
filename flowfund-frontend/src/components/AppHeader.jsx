@@ -10,7 +10,7 @@ export function LogoMark() {
         height: 34,
         borderRadius: '10px',
         flexShrink: 0,
-        background: `linear-gradient(135deg, ${C.brand} 0%, ${C.ink} 100%)`,
+        background: `linear-gradient(135deg, #0d1b2a 0%, #1a3a5c 100%)`,
         display: 'flex',
         alignItems: 'flex-end',
         justifyContent: 'center',
@@ -61,7 +61,9 @@ export default function AppHeader({ profile, onLogout, liveData, isDemo = false 
         minHeight: '64px',
         flexWrap: 'wrap',
         rowGap: 10,
-        background: C.surface,
+        background: 'rgba(5,11,20,0.88)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
         borderBottom: `1px solid ${C.border}`,
         display: 'flex',
         alignItems: 'center',
@@ -151,8 +153,8 @@ export default function AppHeader({ profile, onLogout, liveData, isDemo = false 
               height: 32,
               borderRadius: '50%',
               flexShrink: 0,
-              background: C.accentFade,
-              border: '2px solid rgba(26,77,62,0.3)',
+              background: 'rgba(46,204,138,0.15)',
+              border: '2px solid rgba(46,204,138,0.35)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -172,6 +174,7 @@ export default function AppHeader({ profile, onLogout, liveData, isDemo = false 
               maxWidth: '140px',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
+              opacity: 0.85,
             }}
           >
             {name}
@@ -191,8 +194,8 @@ export default function AppHeader({ profile, onLogout, liveData, isDemo = false 
             cursor: 'pointer',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = C.brand;
-            e.currentTarget.style.color = C.brand;
+            e.currentTarget.style.borderColor = C.accent;
+            e.currentTarget.style.color = C.accent;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.borderColor = C.border;

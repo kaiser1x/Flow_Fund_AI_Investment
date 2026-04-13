@@ -1,24 +1,41 @@
 export const C = {
-  ink: '#0f2d25',
-  brand: '#1a4d3e',
-  brand2: '#2d6b52',
-  accent: '#2ecc8a',
-  accentFade: 'rgba(46,204,138,0.1)',
-  bg: '#f0f3f1',
-  surface: '#ffffff',
-  border: 'rgba(15,45,37,0.09)',
-  shadow: '0 2px 4px rgba(15,45,37,0.05), 0 8px 24px rgba(15,45,37,0.07)',
-  shadowSm: '0 1px 3px rgba(15,45,37,0.06)',
-  muted: '#6b7c77',
-  faint: '#9aadaa',
-  danger: '#dc2626',
-  success: '#16a34a',
-  income: '#059669',
-  expense: '#e11d48',
-  warning: '#d97706',
-  chartGrid: '#e8ede9',
-  rsiHigh: 'rgba(225,29,72,0.25)',
-  rsiLow: 'rgba(5,150,105,0.2)',
-  r: '16px',
+  // ── Backgrounds ────────────────────────────────────────────────────────────
+  bg:           '#050B14',          // Main page background (dark navy)
+  bgAlt:        '#040914',          // Slightly deeper alt background
+  surface:      '#0D1B2A',          // Card / panel surface
+  surfaceHover: '#0F2035',          // Surface on hover
+
+  // ── Text ───────────────────────────────────────────────────────────────────
+  ink:   '#E8F4F0',                          // Primary text
+  muted: 'rgba(232,244,240,0.55)',            // Secondary text
+  faint: 'rgba(232,244,240,0.32)',            // Hint / de-emphasized text
+
+  // ── Brand / Accent ─────────────────────────────────────────────────────────
+  brand:      '#2ecc8a',                     // Primary brand / action color
+  brand2:     '#26b878',                     // Brand hover / darker variant
+  accent:     '#2ecc8a',                     // Alias kept for compatibility
+  accentFade: 'rgba(46,204,138,0.12)',        // Accent with opacity (badges, bg tints)
+
+  // ── Borders & Dividers ─────────────────────────────────────────────────────
+  border: 'rgba(255,255,255,0.07)',           // Subtle divider on dark
+
+  // ── Shadows ────────────────────────────────────────────────────────────────
+  shadow:   '0 4px 24px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.04)',
+  shadowSm: '0 2px 8px rgba(0,0,0,0.3)',
+
+  // ── Status colors ──────────────────────────────────────────────────────────
+  danger:  '#f87171',
+  success: '#34d399',
+  income:  '#34d399',
+  expense: '#fb7185',
+  warning: '#fbbf24',
+
+  // ── Chart helpers ──────────────────────────────────────────────────────────
+  chartGrid: 'rgba(255,255,255,0.05)',
+  rsiHigh:   'rgba(248,113,133,0.2)',
+  rsiLow:    'rgba(52,211,153,0.15)',
+
+  // ── Border radius ──────────────────────────────────────────────────────────
+  r:  '16px',
   rs: '10px',
 };

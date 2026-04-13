@@ -1,16 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { sendMessage } from '../api/chat';
-
-const C = {
-  ink:    '#0f2d25',
-  brand:  '#1a4d3e',
-  accent: '#2ecc8a',
-  border: 'rgba(15,45,37,0.09)',
-  muted:  '#6b7c77',
-  faint:  '#9aadaa',
-  danger: '#dc2626',
-  surface:'#fff',
-};
+import { C } from '../theme/flowfundTheme';
 
 const PROMPTS = [
   'How am I spending my money?',
@@ -63,7 +53,7 @@ export default function ChatPanel({ hasLinkedAccounts }) {
       background: C.surface,
       borderRadius: '16px',
       border: `1px solid ${C.border}`,
-      boxShadow: '0 2px 4px rgba(15,45,37,0.05), 0 8px 24px rgba(15,45,37,0.07)',
+      boxShadow: C.shadow,
       display: 'flex', flexDirection: 'column',
       ...(isOpen ? {
         height: 'calc(100vh - 120px)',
@@ -83,7 +73,7 @@ export default function ChatPanel({ hasLinkedAccounts }) {
         onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && toggle()}
         style={{
           padding: '15px 20px',
-          background: `linear-gradient(135deg, ${C.ink} 0%, ${C.brand} 100%)`,
+          background: 'linear-gradient(135deg, #0a1628 0%, #1a3347 60%, #0f2d25 100%)',
           display: 'flex', alignItems: 'center', gap: '10px',
           flexShrink: 0,
           cursor: 'pointer',
@@ -151,7 +141,8 @@ export default function ChatPanel({ hasLinkedAccounts }) {
             {m.role === 'bot' && (
               <div style={{
                 width: 24, height: 24, borderRadius: '7px', flexShrink: 0,
-                background: 'rgba(26,77,62,0.08)',
+                background: 'rgba(46,204,138,0.1)',
+                border: '1px solid rgba(46,204,138,0.2)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px',
               }}>
                 🤖
@@ -161,11 +152,12 @@ export default function ChatPanel({ hasLinkedAccounts }) {
               maxWidth: '82%',
               padding: m.role === 'user' ? '9px 13px' : '10px 14px',
               borderRadius: m.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
-              background: m.role === 'user' ? C.brand : '#f3f6f4',
+              background: m.role === 'user' ? C.brand : 'rgba(255,255,255,0.07)',
+              border: m.role === 'user' ? 'none' : `1px solid ${C.border}`,
               color: m.role === 'user' ? '#fff' : C.ink,
               fontSize: '13px', lineHeight: '1.6',
               whiteSpace: 'pre-wrap',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
             }}>
               {m.text}
             </div>
@@ -176,14 +168,17 @@ export default function ChatPanel({ hasLinkedAccounts }) {
           <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
             <div style={{
               width: 24, height: 24, borderRadius: '7px',
-              background: 'rgba(26,77,62,0.08)',
+              background: 'rgba(46,204,138,0.1)',
+              border: '1px solid rgba(46,204,138,0.2)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px',
             }}>
               🤖
             </div>
             <div style={{
               padding: '11px 16px', borderRadius: '14px 14px 14px 4px',
-              background: '#f3f6f4', display: 'flex', gap: '5px', alignItems: 'center',
+              background: 'rgba(255,255,255,0.07)',
+              border: `1px solid ${C.border}`,
+              display: 'flex', gap: '5px', alignItems: 'center',
             }}>
               {[0, 1, 2].map(i => (
                 <div key={i} style={{
@@ -211,13 +206,13 @@ export default function ChatPanel({ hasLinkedAccounts }) {
               onClick={() => handleSend(p)}
               style={{
                 fontSize: '11px', padding: '5px 10px',
-                border: '1px solid rgba(26,77,62,0.18)',
+                border: '1px solid rgba(46,204,138,0.25)',
                 borderRadius: '20px',
-                background: 'rgba(26,77,62,0.04)',
-                color: C.brand, cursor: 'pointer',
+                background: 'rgba(46,204,138,0.07)',
+                color: C.accent, cursor: 'pointer',
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(26,77,62,0.1)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(26,77,62,0.04)'; }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(46,204,138,0.14)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(46,204,138,0.07)'; }}
             >
               {p}
             </button>
@@ -250,20 +245,20 @@ export default function ChatPanel({ hasLinkedAccounts }) {
           placeholder="Ask about your spending or savings…"
           style={{
             flex: 1, padding: '9px 13px',
-            border: `1.5px solid ${input ? C.brand : C.border}`,
+            border: `1.5px solid ${input ? C.accent : C.border}`,
             borderRadius: '10px',
             fontSize: '13px', color: C.ink,
             background: C.surface, outline: 'none',
           }}
-          onFocus={e => { e.target.style.borderColor = C.brand; }}
-          onBlur={e => { e.target.style.borderColor = input ? C.brand : C.border; }}
+          onFocus={e => { e.target.style.borderColor = C.accent; }}
+          onBlur={e => { e.target.style.borderColor = input ? C.accent : C.border; }}
         />
         <button
           onClick={() => handleSend()}
           disabled={loading || !input.trim()}
           style={{
             width: 38, height: 38,
-            background: (loading || !input.trim()) ? '#dde4e1' : C.brand,
+            background: (loading || !input.trim()) ? 'rgba(255,255,255,0.08)' : C.brand,
             color: (loading || !input.trim()) ? C.faint : '#fff',
             border: 'none', borderRadius: '10px',
             fontSize: '17px', fontWeight: 700,

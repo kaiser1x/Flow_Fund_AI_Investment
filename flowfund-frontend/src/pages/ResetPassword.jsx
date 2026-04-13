@@ -6,7 +6,7 @@ const styles = {
   layout: { display: 'flex', minHeight: '100vh', width: '100%' },
   leftPanel: {
     flex: '1',
-    background: 'linear-gradient(135deg, #0f2d25 0%, #1a4d3e 40%, #0d3d2e 100%)',
+    background: 'linear-gradient(160deg, #102222 0%, #0d2d1f 50%, #061a13 100%)',
     position: 'relative', overflow: 'hidden',
     display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '48px 40px',
   },
@@ -23,37 +23,37 @@ const styles = {
   welcomeSub: { color: 'rgba(255,255,255,0.85)', fontSize: '18px', fontWeight: 400 },
   siteUrl: { color: 'rgba(255,255,255,0.5)', fontSize: '13px', position: 'relative', zIndex: 1 },
   rightPanel: {
-    width: '480px', minHeight: '100vh', background: '#fff',
+    width: '480px', minHeight: '100vh', background: '#050B14',
     display: 'flex', flexDirection: 'column', justifyContent: 'center',
-    padding: '48px 56px', boxShadow: '-4px 0 24px rgba(0,0,0,0.06)',
+    padding: '48px 56px', boxShadow: '-1px 0 0 rgba(255,255,255,0.07)',
   },
-  formTitle: { fontSize: '28px', fontWeight: 700, color: '#0f2d25', marginBottom: '8px' },
-  subtitle: { fontSize: '14px', color: '#6b7c77', marginBottom: '32px', lineHeight: 1.6 },
+  formTitle: { fontSize: '28px', fontWeight: 700, color: '#E8F4F0', marginBottom: '8px' },
+  subtitle: { fontSize: '14px', color: 'rgba(232,244,240,0.5)', marginBottom: '32px', lineHeight: 1.6 },
   inputWrap: { marginBottom: '24px' },
-  label: { display: 'block', fontSize: '12px', color: '#666', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' },
-  input: { width: '100%', border: 'none', borderBottom: '2px solid #e8e8e8', padding: '14px 0', fontSize: '16px', outline: 'none', transition: 'border-color 0.2s', background: 'transparent' },
+  label: { display: 'block', fontSize: '12px', color: 'rgba(232,244,240,0.5)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' },
+  input: { width: '100%', border: 'none', borderBottom: '2px solid rgba(255,255,255,0.12)', padding: '14px 0', fontSize: '16px', outline: 'none', transition: 'border-color 0.2s', background: 'transparent', color: '#E8F4F0' },
   btnPrimary: {
     width: '100%', padding: '16px 24px', marginTop: '8px',
-    background: 'linear-gradient(90deg, #1a4d3e 0%, #2d6a52 50%, #3d7a5c 100%)',
+    background: '#2ecc8a',
     color: '#fff', border: 'none', borderRadius: '8px',
     fontSize: '14px', fontWeight: 600, letterSpacing: '0.08em',
     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
   },
   btnPrimaryArrow: { width: '18px', height: '18px', borderRight: '2px solid #fff', borderBottom: '2px solid #fff', transform: 'rotate(-45deg)', marginLeft: '4px' },
-  error: { color: '#c53030', fontSize: '14px', marginBottom: '16px' },
-  hint: { fontSize: '12px', color: '#9aadaa', marginTop: '6px' },
+  error: { color: '#f87171', fontSize: '14px', marginBottom: '16px' },
+  hint: { fontSize: '12px', color: 'rgba(232,244,240,0.35)', marginTop: '6px' },
   successBox: {
-    background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.25)',
+    background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.25)',
     borderRadius: '10px', padding: '16px 20px', marginBottom: '24px',
-    color: '#15803d', fontSize: '14px', lineHeight: 1.6,
+    color: '#34d399', fontSize: '14px', lineHeight: 1.6,
   },
   invalidBox: {
-    background: 'rgba(197,48,48,0.06)', border: '1px solid rgba(197,48,48,0.2)',
+    background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.2)',
     borderRadius: '10px', padding: '16px 20px', marginBottom: '24px',
-    color: '#c53030', fontSize: '14px', lineHeight: 1.6,
+    color: '#f87171', fontSize: '14px', lineHeight: 1.6,
   },
   linkBlock: { textAlign: 'center', marginTop: '28px' },
-  link: { color: '#1a4d3e', fontWeight: 600, textDecoration: 'none' },
+  link: { color: '#2ecc8a', fontWeight: 600, textDecoration: 'none' },
 };
 
 export default function ResetPassword() {
@@ -186,7 +186,7 @@ export default function ResetPassword() {
               {!loading && <span style={styles.btnPrimaryArrow} />}
             </button>
             <div style={styles.linkBlock}>
-              <Link to="/login" style={{ ...styles.link, fontWeight: 400, color: '#6b7c77' }}>
+              <Link to="/login" style={{ ...styles.link, fontWeight: 400, color: 'rgba(232,244,240,0.45)' }}>
                 Back to sign in
               </Link>
             </div>

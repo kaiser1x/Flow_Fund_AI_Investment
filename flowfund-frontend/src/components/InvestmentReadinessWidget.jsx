@@ -5,7 +5,7 @@ import { getInvestmentReadiness } from '../api/investmentReadiness';
 import { C } from '../theme/flowfundTheme';
 
 // ── Color map (spec-defined) ──────────────────────────────────────────────────
-const BAND_COLOR = { green: '#16a34a', yellow: '#d97706', red: '#dc2626' };
+const BAND_COLOR = { green: '#34d399', yellow: '#fbbf24', red: '#f87171' };
 
 const TOOLTIP_TEXT = {
   green:  'Your score indicates your finances are in a healthy position for investing.',
@@ -34,7 +34,7 @@ function ScoreRing({ score, band, size = 120 }) {
           strokeWidth={0}
         >
           <Cell fill={color} />
-          <Cell fill="#e8ede9" />
+          <Cell fill="rgba(255,255,255,0.07)" />
         </Pie>
       </PieChart>
       {/* Score label inside ring */}

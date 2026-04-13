@@ -1,18 +1,6 @@
 import { parseTxnDate, ymdLocal } from '../utils/transactionDate';
 import { spendCategoryDisplay } from '../utils/spendCategoryDisplay';
-
-const C = {
-  ink:    '#0f2d25',
-  brand:  '#1a4d3e',
-  border: 'rgba(15,45,37,0.09)',
-  muted:  '#6b7c77',
-  faint:  '#9aadaa',
-  income: '#059669',
-  expense:'#e11d48',
-  shadow: '0 2px 4px rgba(15,45,37,0.05), 0 8px 24px rgba(15,45,37,0.07)',
-  r:      '16px',
-  rs:     '10px',
-};
+import { C } from '../theme/flowfundTheme';
 
 function getDateLabel(raw) {
   const d = parseTxnDate(raw);
@@ -46,7 +34,7 @@ function groupByDate(txns) {
 export default function TransactionFeed({ transactions, isDemo, hasBankLink = true, loading, error }) {
   if (loading) {
     return (
-      <div style={{ background: '#fff', borderRadius: C.r, border: `1px solid ${C.border}`, boxShadow: C.shadow, overflow: 'hidden' }}>
+      <div style={{ background: C.surface, borderRadius: C.r, border: `1px solid ${C.border}`, boxShadow: C.shadow, overflow: 'hidden' }}>
         <div style={{ padding: '18px 24px', borderBottom: `1px solid ${C.border}` }}>
           <div style={{ fontSize: '16px', fontWeight: 700, color: C.ink }}>Recent Transactions</div>
         </div>
@@ -54,7 +42,7 @@ export default function TransactionFeed({ transactions, isDemo, hasBankLink = tr
           {[1, 2, 3, 4].map(i => (
             <div key={i} style={{
               height: 52, borderRadius: C.rs,
-              background: 'linear-gradient(90deg, #e8ede9 0%, #d4ddd8 50%, #e8ede9 100%)',
+              background: 'linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 100%)',
               backgroundSize: '400px 100%',
               animation: 'ff-shimmer 1.4s ease infinite',
             }} />
@@ -67,7 +55,7 @@ export default function TransactionFeed({ transactions, isDemo, hasBankLink = tr
   const groups = groupByDate(transactions);
 
   return (
-    <div style={{ background: '#fff', borderRadius: C.r, border: `1px solid ${C.border}`, boxShadow: C.shadow, overflow: 'hidden' }}>
+    <div style={{ background: C.surface, borderRadius: C.r, border: `1px solid ${C.border}`, boxShadow: C.shadow, overflow: 'hidden' }}>
       {/* Header */}
       <div style={{
         padding: '18px 24px', borderBottom: `1px solid ${C.border}`,
@@ -93,7 +81,7 @@ export default function TransactionFeed({ transactions, isDemo, hasBankLink = tr
       {/* Feed */}
       <div style={{ maxHeight: '480px', overflowY: 'auto' }}>
         {error && (
-          <div style={{ padding: '16px 24px', fontSize: '13px', color: '#dc2626' }}>{error}</div>
+          <div style={{ padding: '16px 24px', fontSize: '13px', color: C.danger }}>{error}</div>
         )}
         {!error && transactions.length === 0 ? (
           <div style={{ padding: '48px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
@@ -114,7 +102,7 @@ export default function TransactionFeed({ transactions, isDemo, hasBankLink = tr
                 padding: '10px 24px 5px',
                 fontSize: '11px', fontWeight: 700,
                 color: C.faint, textTransform: 'uppercase', letterSpacing: '0.09em',
-                background: '#fafbfa',
+                background: 'rgba(255,255,255,0.03)',
                 borderBottom: `1px solid ${C.border}`,
               }}>
                 {label}
@@ -136,7 +124,7 @@ export default function TransactionFeed({ transactions, isDemo, hasBankLink = tr
                       borderBottom: `1px solid ${C.border}`,
                       cursor: 'default',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.background = '#f8faf9'; }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = ''; }}
                   >
                     <div style={{

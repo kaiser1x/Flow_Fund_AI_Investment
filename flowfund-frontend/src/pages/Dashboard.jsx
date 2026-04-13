@@ -66,7 +66,7 @@ function StatCard({ icon, label, value, sub, valueColor, shimmer }) {
       {shimmer ? (
         <div style={{
           height: 28, borderRadius: '6px', width: '65%',
-          background: 'linear-gradient(90deg, #e8ede9 0%, #d4ddd8 50%, #e8ede9 100%)',
+          background: 'linear-gradient(90deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 100%)',
           backgroundSize: '400px 100%',
           animation: 'ff-shimmer 1.4s ease infinite',
         }} />
@@ -108,7 +108,7 @@ function ProfileCard({ profile, accountsCount, onNavigateToProfile }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
           <div style={{
             width: 46, height: 46, borderRadius: '14px', flexShrink: 0,
-            background: `linear-gradient(135deg, ${C.brand} 0%, ${C.accent} 100%)`,
+            background: 'linear-gradient(135deg, #1a3a5c 0%, #0f2d25 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '17px', fontWeight: 800, color: '#fff',
           }}>
@@ -181,7 +181,7 @@ function BankAccountsCard({
               disabled={syncLoading || linking}
               style={{
                 padding: '8px 14px',
-                background: syncLoading || linking ? '#dde4e1' : '#f0f4f2',
+                background: syncLoading || linking ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.07)',
                 color: C.ink,
                 border: `1px solid ${C.border}`, borderRadius: C.rs,
                 fontSize: '12px', fontWeight: 600,
@@ -200,9 +200,9 @@ function BankAccountsCard({
               title="Uses Plaid /transactions/refresh — best for Sandbox (e.g. user_transactions_dynamic)"
               style={{
                 padding: '8px 14px',
-                background: syncLoading || linking ? '#dde4e1' : '#f7f5ff',
-                color: '#5b21b6',
-                border: '1px solid rgba(91,33,182,0.25)', borderRadius: C.rs,
+                background: syncLoading || linking ? 'rgba(255,255,255,0.04)' : 'rgba(139,92,246,0.12)',
+                color: '#a78bfa',
+                border: '1px solid rgba(139,92,246,0.25)', borderRadius: C.rs,
                 fontSize: '12px', fontWeight: 600,
                 cursor: syncLoading || linking ? 'not-allowed' : 'pointer',
                 whiteSpace: 'nowrap',
@@ -216,7 +216,7 @@ function BankAccountsCard({
             disabled={loadingToken || linking || !ready}
             style={{
               padding: '8px 18px',
-              background: (loadingToken || linking || !ready) ? '#dde4e1' : C.brand,
+              background: (loadingToken || linking || !ready) ? 'rgba(255,255,255,0.08)' : C.brand,
               color: (loadingToken || linking || !ready) ? C.faint : '#fff',
               border: 'none', borderRadius: C.rs,
               fontSize: '13px', fontWeight: 600,
@@ -287,7 +287,7 @@ function BankAccountsCard({
           [1, 2].map(i => (
             <div key={i} style={{
               height: 64, borderRadius: C.rs, marginBottom: '8px',
-              background: 'linear-gradient(90deg, #e8ede9 0%, #d4ddd8 50%, #e8ede9 100%)',
+              background: 'linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 100%)',
               backgroundSize: '400px 100%',
               animation: 'ff-shimmer 1.4s ease infinite',
             }} />
@@ -304,11 +304,12 @@ function BankAccountsCard({
               <div key={acc.plaid_account_id || i} style={{
                 display: 'flex', alignItems: 'center', gap: '14px',
                 padding: '14px 16px', borderRadius: C.rs,
-                background: '#f8faf9', border: `1px solid ${C.border}`,
+                background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`,
               }}>
                 <div style={{
                   width: 36, height: 36, borderRadius: '10px', flexShrink: 0,
-                  background: `linear-gradient(135deg, ${C.brand} 0%, ${C.brand2} 100%)`,
+                  background: 'rgba(46,204,138,0.12)',
+                  border: '1px solid rgba(46,204,138,0.2)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '18px', lineHeight: 1,
                 }}>
@@ -342,7 +343,7 @@ function BankAccountsCard({
                 disabled={disconnectLoading || linking || syncLoading}
                 style={{
                   padding: '8px 12px',
-                  background: disconnectStep === 1 ? 'rgba(220,38,38,0.08)' : 'transparent',
+                  background: disconnectStep === 1 ? 'rgba(248,113,113,0.12)' : 'transparent',
                   color: C.danger,
                   border: `1px solid ${disconnectStep === 1 ? 'rgba(220,38,38,0.45)' : C.border}`,
                   borderRadius: C.rs,
@@ -367,7 +368,7 @@ function BankAccountsCard({
           <div
             role="presentation"
             style={{
-              position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.45)',
+              position: 'fixed', inset: 0, background: 'rgba(2,5,12,0.75)',
               zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center',
               padding: '20px',
             }}
@@ -422,7 +423,7 @@ function BankAccountsCard({
                   disabled={disconnectLoading}
                   style={{
                     padding: '10px 16px',
-                    background: disconnectLoading ? '#fca5a5' : C.danger,
+                    background: disconnectLoading ? 'rgba(248,113,113,0.5)' : C.danger,
                     color: '#fff',
                     border: 'none',
                     borderRadius: C.rs,
@@ -509,7 +510,7 @@ function InsightsCard({ transactions, isDemo, hasBankLink }) {
                     <span style={{ fontSize: '11px', color: C.faint, width: '28px', textAlign: 'right' }}>{pct}%</span>
                   </div>
                 </div>
-                <div style={{ height: '5px', borderRadius: '3px', background: '#eef1ef', overflow: 'hidden' }}>
+                <div style={{ height: '5px', borderRadius: '3px', background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${pct}%`, borderRadius: '3px', background: color }} />
                 </div>
               </div>
@@ -716,7 +717,7 @@ export default function Dashboard() {
   // ── Full-page loading ──────────────────────────────────────────────────────
   if (profileLoading) {
     return (
-      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
+      <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
         <div style={{ textAlign: 'center' }}>
           <LogoMark />
           <div style={{ marginTop: '16px', fontSize: '14px', color: C.muted }}>Loading your dashboard…</div>
@@ -728,7 +729,7 @@ export default function Dashboard() {
   return (
     <div style={{
       minHeight: '100vh', background: C.bg,
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      fontFamily: 'DM Sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     }}>
       <AppHeader profile={profile} onLogout={handleLogout} liveData={accounts.length > 0} isDemo={false} />
 
@@ -789,7 +790,7 @@ export default function Dashboard() {
                   onClick={() => setDashTab(tab.key)}
                   style={{
                     padding: '7px 16px',
-                    background: dashTab === tab.key ? C.brand : 'transparent',
+                    background: dashTab === tab.key ? C.brand : 'rgba(255,255,255,0.05)',
                     color: dashTab === tab.key ? '#fff' : C.muted,
                     border: `1px solid ${dashTab === tab.key ? C.brand : C.border}`,
                     borderRadius: 99, fontSize: 12, fontWeight: 600,

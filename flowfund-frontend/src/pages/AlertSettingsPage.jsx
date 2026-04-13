@@ -23,7 +23,7 @@ function ToggleRow({ label, description, checked, onChange, disabled }) {
         onClick={() => onChange(!checked)}
         style={{
           flexShrink: 0, width: 48, height: 26, borderRadius: 99, border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
-          background: checked ? C.brand : '#d4ddd8', position: 'relative', transition: 'background 0.15s',
+          background: checked ? C.brand : 'rgba(255,255,255,0.15)', position: 'relative', transition: 'background 0.15s',
         }}
       >
         <span style={{

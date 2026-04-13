@@ -40,7 +40,7 @@ function SummaryBadge({ label, value, color }) {
   return (
     <div style={{
       flex: '1 1 130px', padding: '12px 16px', borderRadius: C.rs,
-      background: '#f8faf9', border: `1px solid ${C.border}`,
+      background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`,
       display: 'flex', flexDirection: 'column', gap: '4px',
     }}>
       <span style={{
@@ -179,7 +179,7 @@ export default function HistoricalAnalysis({ isDemo }) {
                   padding: '6px 10px', borderRadius: C.rs,
                   border: `1px solid ${C.border}`,
                   fontSize: '13px', color: C.ink,
-                  background: '#f8faf9', outline: 'none',
+                  background: 'rgba(255,255,255,0.04)', outline: 'none', color: 'inherit',
                 }}
               />
             </div>

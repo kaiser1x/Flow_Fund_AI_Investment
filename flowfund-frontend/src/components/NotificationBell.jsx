@@ -39,7 +39,7 @@ const TYPE_META = {
   spending_alert:    { icon: '💸', color: '#e11d48' },
   budget_warning:    { icon: '⚠️', color: '#d97706' },
   large_transaction: { icon: '💳', color: '#7c3aed' },
-  system:            { icon: '🔔', color: '#1a4d3e' },
+  system:            { icon: '🔔', color: '#2ecc8a' },
 };
 
 // ── Demo read-state persistence (legacy demo IDs in localStorage) ─────────────
@@ -215,7 +215,7 @@ export default function NotificationBell({ isDemo = false }) {
             background: C.surface,
             borderRadius: C.r,
             border: `1px solid ${C.border}`,
-            boxShadow: '0 4px 6px rgba(15,45,37,0.06), 0 12px 32px rgba(15,45,37,0.12)',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.05)',
             zIndex: 200,
             overflow: 'hidden',
           }}

@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { getGoalsSummary } from '../api/goals';
 import { C } from '../theme/flowfundTheme';
 
-const STATUS_COLOR = { green: '#16a34a', yellow: '#d97706', red: '#dc2626' };
+const STATUS_COLOR = { green: '#34d399', yellow: '#fbbf24', red: '#f87171' };
 const TYPE_ICON    = { savings: '🏦', debt_payoff: '💳', spending_limit: '📊', investment_target: '📈' };
 
 function ProgressBar({ pct, color }) {
   return (
     <div style={{
       height: 6, borderRadius: 99,
-      background: 'rgba(15,45,37,0.07)',
+      background: 'rgba(255,255,255,0.08)',
       overflow: 'hidden', marginTop: 4,
     }}>
       <div style={{

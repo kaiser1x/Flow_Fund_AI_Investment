@@ -11,7 +11,7 @@ const styles = {
   },
   leftPanel: {
     flex: '1',
-    background: 'linear-gradient(135deg, #0f2d25 0%, #1a4d3e 40%, #0d3d2e 100%)',
+    background: 'linear-gradient(160deg, #102222 0%, #0d2d1f 50%, #061a13 100%)',
     position: 'relative',
     overflow: 'hidden',
     display: 'flex',
@@ -110,17 +110,17 @@ const styles = {
   rightPanel: {
     width: '480px',
     minHeight: '100vh',
-    background: '#fff',
+    background: '#050B14',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
     padding: '48px 56px',
-    boxShadow: '-4px 0 24px rgba(0,0,0,0.06)',
+    boxShadow: '-1px 0 0 rgba(255,255,255,0.07)',
   },
   formTitle: {
     fontSize: '28px',
     fontWeight: 700,
-    color: '#0f2d25',
+    color: '#E8F4F0',
     marginBottom: '32px',
   },
   inputWrap: {
@@ -129,20 +129,21 @@ const styles = {
   input: {
     width: '100%',
     border: 'none',
-    borderBottom: '2px solid #e8e8e8',
+    borderBottom: '2px solid rgba(255,255,255,0.12)',
     padding: '14px 0',
     fontSize: '16px',
     outline: 'none',
     transition: 'border-color 0.2s',
     background: 'transparent',
+    color: '#E8F4F0',
   },
   inputFocus: {
-    borderBottomColor: '#1a4d3e',
+    borderBottomColor: '#2ecc8a',
   },
   label: {
     display: 'block',
     fontSize: '12px',
-    color: '#666',
+    color: 'rgba(232,244,240,0.5)',
     marginBottom: '6px',
     textTransform: 'uppercase',
     letterSpacing: '0.06em',
@@ -151,7 +152,7 @@ const styles = {
     width: '100%',
     padding: '16px 24px',
     marginTop: '8px',
-    background: 'linear-gradient(90deg, #1a4d3e 0%, #2d6a52 50%, #3d7a5c 100%)',
+    background: '#2ecc8a',
     color: '#fff',
     border: 'none',
     borderRadius: '8px',
@@ -173,14 +174,14 @@ const styles = {
     marginLeft: '4px',
   },
   error: {
-    color: '#c53030',
+    color: '#f87171',
     fontSize: '14px',
     marginBottom: '16px',
   },
   divider: {
     margin: '28px 0 24px',
     textAlign: 'center',
-    color: '#999',
+    color: 'rgba(232,244,240,0.35)',
     fontSize: '13px',
   },
   linkBlock: {
@@ -188,7 +189,7 @@ const styles = {
     marginTop: '24px',
   },
   link: {
-    color: '#1a4d3e',
+    color: '#2ecc8a',
     fontWeight: 600,
     textDecoration: 'none',
   },
@@ -268,7 +269,7 @@ export default function Login() {
               required
             />
             <div style={{ textAlign: 'right', marginTop: '8px' }}>
-              <Link to="/forgot-password" style={{ fontSize: '12px', color: '#1a4d3e', textDecoration: 'none', fontWeight: 500 }}>
+              <Link to="/forgot-password" style={{ fontSize: '12px', color: '#2ecc8a', textDecoration: 'none', fontWeight: 500 }}>
                 Forgot password?
               </Link>
             </div>

@@ -221,7 +221,7 @@ function inputStyle() {
   return {
     width: '100%', padding: '9px 12px',
     border: `1px solid ${C.border}`, borderRadius: C.rs,
-    fontSize: 13, color: C.ink, background: '#fff',
+    fontSize: 13, color: C.ink, background: 'rgba(255,255,255,0.05)',
     outline: 'none', boxSizing: 'border-box',
   };
 }
@@ -272,7 +272,7 @@ function ResultSummary({ result, scenarioType }) {
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 10, marginBottom: 16 }}>
       {items.map((item, i) => (
         <div key={i} style={{
-          background: '#f8faf9', borderRadius: C.rs,
+          background: 'rgba(255,255,255,0.04)', borderRadius: C.rs,
           border: `1px solid ${C.border}`, padding: '10px 14px',
         }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: C.faint, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 3 }}>
@@ -304,7 +304,7 @@ function ProjectionTable({ scenarioType, projectionData }) {
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
           <thead>
-            <tr style={{ background: '#f8faf9' }}>
+            <tr style={{ background: 'rgba(255,255,255,0.04)' }}>
               <th style={thStyle}>{xLabel}</th>
               {colKeys.map(k => <th key={k} style={thStyle}>{k.replace(/_/g, ' ')}</th>)}
             </tr>
@@ -409,7 +409,7 @@ function SimulationBuilder({ prefill, initialSnap, onSaved, onClose }) {
 
   return (
     <div
-      style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(15,45,37,0.45)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '24px 16px', overflowY: 'auto' }}
+      style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(2,5,12,0.75)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '24px 16px', overflowY: 'auto' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div style={{ background: C.surface, borderRadius: C.r, border: `1px solid ${C.border}`, boxShadow: C.shadow, width: '100%', maxWidth: 720, marginBottom: 24 }}>
@@ -717,7 +717,7 @@ export default function SimulationsPage() {
 
       {/* Delete confirm */}
       {deleteTarget && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(15,45,37,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(2,5,12,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ background: C.surface, borderRadius: C.r, border: `1px solid ${C.border}`, boxShadow: C.shadow, padding: '28px', maxWidth: 380, width: '100%' }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: C.ink, marginBottom: 8 }}>Delete Simulation?</div>
             <p style={{ margin: '0 0 20px', fontSize: 13, color: C.muted, lineHeight: 1.6 }}>

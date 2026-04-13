@@ -5,7 +5,7 @@ import { verifyOtp, resendOtp } from '../api/auth';
 const styles = {
   layout: { display: 'flex', minHeight: '100vh', width: '100%' },
   leftPanel: {
-    flex: '1', background: 'linear-gradient(135deg, #0f2d25 0%, #1a4d3e 40%, #0d3d2e 100%)',
+    flex: '1', background: 'linear-gradient(160deg, #102222 0%, #0d2d1f 50%, #061a13 100%)',
     position: 'relative', overflow: 'hidden',
     display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '48px 40px',
   },
@@ -22,40 +22,40 @@ const styles = {
   welcomeSub: { color: 'rgba(255,255,255,0.85)', fontSize: '18px', fontWeight: 400 },
   siteUrl: { color: 'rgba(255,255,255,0.5)', fontSize: '13px', position: 'relative', zIndex: 1 },
   rightPanel: {
-    width: '480px', minHeight: '100vh', background: '#fff',
+    width: '480px', minHeight: '100vh', background: '#050B14',
     display: 'flex', flexDirection: 'column', justifyContent: 'center',
-    padding: '48px 56px', boxShadow: '-4px 0 24px rgba(0,0,0,0.06)',
+    padding: '48px 56px', boxShadow: '-1px 0 0 rgba(255,255,255,0.07)',
   },
-  formTitle: { fontSize: '28px', fontWeight: 700, color: '#0f2d25', marginBottom: '8px' },
-  subtitle: { fontSize: '14px', color: '#6b7c77', marginBottom: '32px', lineHeight: 1.5 },
+  formTitle: { fontSize: '28px', fontWeight: 700, color: '#E8F4F0', marginBottom: '8px' },
+  subtitle: { fontSize: '14px', color: 'rgba(232,244,240,0.5)', marginBottom: '32px', lineHeight: 1.5 },
   emailBadge: {
     display: 'inline-block', padding: '4px 12px', borderRadius: '20px',
-    background: 'rgba(26,77,62,0.08)', border: '1px solid rgba(26,77,62,0.18)',
-    fontSize: '13px', fontWeight: 600, color: '#1a4d3e',
+    background: 'rgba(46,204,138,0.1)', border: '1px solid rgba(46,204,138,0.25)',
+    fontSize: '13px', fontWeight: 600, color: '#2ecc8a',
   },
   otpRow: { display: 'flex', gap: '10px', marginBottom: '28px', justifyContent: 'center' },
   otpBox: {
     width: '52px', height: '60px', textAlign: 'center',
-    border: '2px solid #e8e8e8', borderRadius: '10px',
-    fontSize: '24px', fontWeight: 700, color: '#0f2d25',
-    outline: 'none', background: '#fff',
+    border: '2px solid rgba(255,255,255,0.12)', borderRadius: '10px',
+    fontSize: '24px', fontWeight: 700, color: '#E8F4F0',
+    outline: 'none', background: 'rgba(255,255,255,0.04)',
     transition: 'border-color 0.2s',
   },
   btnPrimary: {
     width: '100%', padding: '16px 24px', marginTop: '4px',
-    background: 'linear-gradient(90deg, #1a4d3e 0%, #2d6a52 50%, #3d7a5c 100%)',
+    background: '#2ecc8a',
     color: '#fff', border: 'none', borderRadius: '8px',
     fontSize: '14px', fontWeight: 600, letterSpacing: '0.08em',
     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
   },
-  error: { color: '#c53030', fontSize: '14px', marginBottom: '16px' },
-  success: { color: '#16a34a', fontSize: '14px', marginBottom: '16px', fontWeight: 500 },
-  resendRow: { textAlign: 'center', marginTop: '20px', fontSize: '13px', color: '#6b7c77' },
+  error: { color: '#f87171', fontSize: '14px', marginBottom: '16px' },
+  success: { color: '#34d399', fontSize: '14px', marginBottom: '16px', fontWeight: 500 },
+  resendRow: { textAlign: 'center', marginTop: '20px', fontSize: '13px', color: 'rgba(232,244,240,0.45)' },
   resendBtn: {
     background: 'none', border: 'none', cursor: 'pointer',
-    color: '#1a4d3e', fontWeight: 600, fontSize: '13px', padding: 0,
+    color: '#2ecc8a', fontWeight: 600, fontSize: '13px', padding: 0,
   },
-  link: { color: '#1a4d3e', fontWeight: 600, textDecoration: 'none' },
+  link: { color: '#2ecc8a', fontWeight: 600, textDecoration: 'none' },
 };
 
 export default function VerifyEmail() {
@@ -193,7 +193,7 @@ export default function VerifyEmail() {
           )}
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '13px', color: '#6b7c77' }}>
+        <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '13px', color: 'rgba(232,244,240,0.45)' }}>
           Wrong email?{' '}
           <Link to="/register" style={styles.link}>Start over</Link>
         </div>

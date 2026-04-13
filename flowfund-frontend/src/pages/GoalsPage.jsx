@@ -6,7 +6,7 @@ import AppHeader from '../components/AppHeader';
 import { C } from '../theme/flowfundTheme';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const STATUS_COLOR  = { green: '#16a34a', yellow: '#d97706', red: '#dc2626' };
+const STATUS_COLOR  = { green: '#34d399', yellow: '#fbbf24', red: '#f87171' };
 const STATUS_BG     = { green: 'rgba(22,163,74,0.08)', yellow: 'rgba(217,119,6,0.08)', red: 'rgba(220,38,38,0.07)' };
 const TYPE_ICON     = { savings: '🏦', debt_payoff: '💳', spending_limit: '📊', investment_target: '📈' };
 const TYPE_LABEL    = { savings: 'Savings', debt_payoff: 'Debt Payoff', spending_limit: 'Spending Limit', investment_target: 'Investment Target' };
@@ -35,7 +35,7 @@ function minFutureDate() {
 // ── Sub-components ────────────────────────────────────────────────────────────
 function ProgressBar({ pct, color }) {
   return (
-    <div style={{ height: 7, borderRadius: 99, background: 'rgba(15,45,37,0.07)', overflow: 'hidden' }}>
+    <div style={{ height: 7, borderRadius: 99, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
       <div style={{
         height: '100%', width: `${Math.min(100, pct)}%`,
         background: color, borderRadius: 99, transition: 'width 0.4s ease',
@@ -112,7 +112,7 @@ function GoalCard({ goal, onEdit, onDelete }) {
         {goal.notes && (
           <div style={{
             fontSize: 12, color: C.muted, lineHeight: 1.5,
-            background: '#f8faf9', borderRadius: C.rs,
+            background: 'rgba(255,255,255,0.04)', borderRadius: C.rs,
             padding: '8px 12px', marginBottom: 12,
           }}>
             {goal.notes}
@@ -186,13 +186,13 @@ function GoalFormModal({ initial, onSave, onClose, saving }) {
     width: '100%', padding: '9px 12px',
     border: `1px solid ${err ? C.danger : C.border}`,
     borderRadius: C.rs, fontSize: 13, color: C.ink,
-    background: '#fff', outline: 'none', boxSizing: 'border-box',
+    background: 'rgba(255,255,255,0.05)', outline: 'none', boxSizing: 'border-box', color: 'inherit',
   });
 
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 200,
-      background: 'rgba(15,45,37,0.4)',
+      background: 'rgba(2,5,12,0.75)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '16px',
     }}
@@ -698,7 +698,7 @@ export default function GoalsPage() {
       {deleteTarget && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 200,
-          background: 'rgba(15,45,37,0.4)',
+          background: 'rgba(2,5,12,0.75)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
         }}>
           <div style={{

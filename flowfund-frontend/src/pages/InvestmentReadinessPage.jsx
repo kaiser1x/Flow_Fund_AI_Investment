@@ -185,7 +185,7 @@ function StockIdeasSection({ data, loading, band }) {
 
       <div style={{
         padding: '12px 24px 16px', borderTop: `1px solid ${C.border}`,
-        background: '#fafcfb',
+        background: 'rgba(255,255,255,0.03)',
       }}>
         <p style={{ margin: 0, fontSize: '11px', color: C.muted, lineHeight: 1.55 }}>
           {data.disclaimer}
